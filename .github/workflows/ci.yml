@@ -109,3 +109,8 @@ jobs:
 
       - run: ${{ matrix.typecheck }}
         working-directory: ${{ matrix.dir }}
+
+      # Examples with a test script run it (rwsdk-real exercises the consumer
+      # test harness end-to-end: jsdom + @gleanql/client/testing).
+      - run: pnpm test --if-present
+        working-directory: ${{ matrix.dir }}

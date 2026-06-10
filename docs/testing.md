@@ -115,6 +115,21 @@ A handler returns the operation's **data**; return `{ errors: [{ message }] }`
 to exercise the failure path (optimistic writes roll back, `state.error`
 populates).
 
+> [!NOTE]
+> **Operation names.** A compiled selector operation is named
+> `<Component>_<rootField>` (e.g. `RenameTitle_setProductTitle`); route
+> operations are named after the route. Every name is listed on `/__glean`
+> and in `generated/persisted.json`. An unmatched request renders the island's
+> error state with `mockGraphFetch: no handler for "<name>"` — the test tells
+> you the name it wanted.
+
+> [!NOTE]
+> **Bound call sites.** `useMutation`/`useSubscription` call sites are bound to
+> their compiled operations *by the build* — so a jsdom test of a mutation
+> island needs the glean plugin in `vitest.config.ts` (same options as the
+> app's `vite.config.ts`). `examples/rwsdk-real/vitest.config.mts` +
+> `tests/harness.test.tsx` show the complete working setup.
+
 ## Server-side code: a recording adapter
 
 `runRoute`, `runMutation`, and integration-level code take an adapter — pass
