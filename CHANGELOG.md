@@ -31,6 +31,11 @@ cache out. Highlights, by package:
 - Persisted-operation transport (`persisted: true`, APQ wire shape) +
   `createPersistedResolver` server allowlist.
 - Cycle-guarded normalization (clear error on cyclic optimistic data).
+- Consumer test harness (`@gleanql/client/testing`): `createTestGraph` seeds a
+  real runtime from plain JSON (typed reads + a production-path hydration
+  payload for islands), `createMockAdapter` records operations with
+  push-driven subscriptions, `mockGraphFetch` intercepts the endpoint by
+  operation name.
 
 ### @gleanql/core
 - Operation IR, builder (`q.*` + the `buildQuery` fluent escape hatch),

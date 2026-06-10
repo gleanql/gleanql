@@ -48,6 +48,9 @@ version (with an honest feature matrix) is in the docs: `pnpm docs` →
   and exactly which component reads which field.
 - 📊 **Typed escape hatch** — hand-build operations for dynamic shapes
   (reports, dashboards) and run them by name, fully typed.
+- 🧪 **A real testing story** — `@gleanql/client/testing` seeds a real runtime
+  from plain JSON: typed reads for server components, production-path hydration
+  for islands, and wire mocks for mutations. No GraphQL server in your tests.
 
 ## Get started
 
