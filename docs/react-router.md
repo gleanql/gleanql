@@ -34,13 +34,18 @@ export const integration = createGraphIntegration({ schema, operations, adapter 
 
 ## Setup
 
-One line wires the build. The preset scans `app/`, points the accessor at the scope module, and emits isomorphic client glue. `~` is the app alias. `ssr.noExternal` lets Vite apply that alias inside the generated glue, which lives in `node_modules`.
+One line wires the build. The preset scans `app/`, points the accessor at the scope module, and emits isomorphic client glue. `~` is the app alias. `ssr.noExternal` lets Vite apply that alias inside the generated glue, which lives in `node_modules`. `optimizeDeps.exclude` keeps the glue out of esbuild's prebundle, which cannot apply the alias — without it the browser 503s the module and the page silently never hydrates.
 
 ```tsx
 // vite.config.ts
 export default defineConfig({
   resolve: { alias: [{ find: /^~\//, replacement: appDir + "/" }] },
   ssr: { noExternal: ["@gleanql/client"] },
+  optimizeDeps: {
+    exclude: ["@gleanql/client"],
+    // excluded ⇒ its deps are discovered during the first load; pre-bundle them
+    include: ["react", "react/jsx-dev-runtime", "react-dom/client", "react-router", "@gleanql/core"],
+  },
   plugins: [
     glean({ schema: "schema.graphql", framework: "react-router", endpoint: "/graphql" }),
     reactRouter(),
