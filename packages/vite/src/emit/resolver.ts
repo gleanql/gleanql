@@ -11,21 +11,24 @@ function scopeImport(requestScope: Exclude<RequestScope, "rwsdk">): string {
   return `import { ${requestScope.import} } from ${JSON.stringify(requestScope.from)};`;
 }
 
+/** Per-scope import line + the expression yielding this request's graph (or undefined). */
+function activeSource(requestScope: RequestScope): { readonly imports: string; readonly expr: string } {
+  if (requestScope === "rwsdk") {
+    return {
+      imports: `import { requestInfo } from "rwsdk/worker";`,
+      expr: "requestInfo && requestInfo.ctx && requestInfo.ctx.__graph",
+    };
+  }
+  return { imports: scopeImport(requestScope), expr: `${requestScope.import}()` };
+}
+
 /** The import + `__active()` resolver (throws if the route wasn't preloaded). */
 export function renderActiveResolver(requestScope: RequestScope): string {
-  if (requestScope === "rwsdk") {
-    return `import { requestInfo } from "rwsdk/worker";
+  const { imports, expr } = activeSource(requestScope);
+  return `${imports}
 
 function __active() {
-  const a = requestInfo && requestInfo.ctx && requestInfo.ctx.__graph;
-  if (!a) throw new Error(${JSON.stringify(PRELOAD_ERROR)});
-  return a;
-}`;
-  }
-  return `${scopeImport(requestScope)}
-
-function __active() {
-  const a = ${requestScope.import}();
+  const a = ${expr};
   if (!a) throw new Error(${JSON.stringify(PRELOAD_ERROR)});
   return a;
 }`;
@@ -36,16 +39,10 @@ function __active() {
  * the RSC hydrator, which must be a no-op on routes that never preloaded a graph.
  */
 export function renderActiveResolverNullable(requestScope: RequestScope): string {
-  if (requestScope === "rwsdk") {
-    return `import { requestInfo } from "rwsdk/worker";
+  const { imports, expr } = activeSource(requestScope);
+  return `${imports}
 
 function __activeOrNull() {
-  return (requestInfo && requestInfo.ctx && requestInfo.ctx.__graph) || null;
-}`;
-  }
-  return `${scopeImport(requestScope)}
-
-function __activeOrNull() {
-  return ${requestScope.import}() || null;
+  return (${expr}) || null;
 }`;
 }

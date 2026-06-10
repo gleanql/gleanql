@@ -13,7 +13,7 @@ import {
   hashDocument,
 } from "@gleanql/core";
 import type { GraphCompilerBackend } from "./backend.js";
-import { type AstFacade, typescriptFacade } from "./ast-facade.js";
+import { type AstFacade, isFunctionLike, typescriptFacade } from "./ast-facade.js";
 import { MutableSelection } from "./mutable.js";
 import { VariablesBuilder } from "./variables.js";
 import { findSelectorHookSites } from "./mutation-binding.js";
@@ -141,7 +141,7 @@ class Analyzer {
           if (
             this.ast.isIdentifier(decl.name) &&
             decl.initializer &&
-            (this.ast.isArrowFunction(decl.initializer) || this.ast.isFunctionExpression(decl.initializer))
+            isFunctionLike(this.ast, decl.initializer)
           ) {
             this.addComponent(decl.name.text, decl.initializer.parameters, decl.initializer.body, decl);
           }
@@ -418,7 +418,7 @@ class Analyzer {
       if (!this.consumed.has(node)) this.tryEnterHelper(node, scope, component, stack, route);
       const handled = this.consumed.has(node);
       for (const arg of node.arguments) {
-        if (handled && (this.ast.isArrowFunction(arg) || this.ast.isFunctionExpression(arg))) continue;
+        if (handled && isFunctionLike(this.ast, arg)) continue;
         this.scan(arg, scope, component, stack, route);
       }
       return;
@@ -740,7 +740,7 @@ class Analyzer {
     stack: readonly string[],
     route?: RouteCtx,
   ): boolean {
-    if (this.ast.isArrowFunction(cb) || this.ast.isFunctionExpression(cb)) {
+    if (isFunctionLike(this.ast, cb)) {
       const param = cb.parameters[0]?.name;
       if (!param) return false;
       // Bind (and afterwards restore) the param names in the CURRENT scope, so
@@ -815,7 +815,7 @@ class Analyzer {
 
     // Resolve positional graph-value arguments (skip inline callbacks).
     const argValues = node.arguments.map((arg) =>
-      this.ast.isArrowFunction(arg) || this.ast.isFunctionExpression(arg)
+      isFunctionLike(this.ast, arg)
         ? undefined
         : this.evalExpr(arg, scope, component, stack, route),
     );
@@ -873,7 +873,7 @@ class Analyzer {
     if (
       this.ast.isVariableDeclaration(decl) &&
       decl.initializer &&
-      (this.ast.isArrowFunction(decl.initializer) || this.ast.isFunctionExpression(decl.initializer))
+      isFunctionLike(this.ast, decl.initializer)
     ) {
       const name = this.ast.isIdentifier(decl.name) ? decl.name.text : id.text;
       return { name, params: decl.initializer.parameters, body: decl.initializer.body };
@@ -913,7 +913,7 @@ class Analyzer {
       this.ast.isVariableDeclaration(decl) &&
       this.ast.isIdentifier(decl.name) &&
       decl.initializer &&
-      (this.ast.isArrowFunction(decl.initializer) || this.ast.isFunctionExpression(decl.initializer))
+      isFunctionLike(this.ast, decl.initializer)
     ) {
       info = { name: decl.name.text, params: decl.initializer.parameters, body: decl.initializer.body, declNode: decl };
     }

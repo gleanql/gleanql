@@ -71,6 +71,11 @@ export interface AstFacade {
   printContextExpr(expr: ts.Expression, paramNames: readonly string[], sf: ts.SourceFile): string;
 }
 
+/** Arrow function or function expression — the inline-callback forms the analyzer follows. */
+export function isFunctionLike(ast: AstFacade, n: ts.Node): n is ts.ArrowFunction | ts.FunctionExpression {
+  return ast.isArrowFunction(n) || ast.isFunctionExpression(n);
+}
+
 function substituteCtx(expr: ts.Expression, paramNames: readonly string[]): ts.Expression {
   const visit = (node: ts.Node): ts.Node => {
     // Strip TS-only syntax that would be invalid in the emitted JS factory

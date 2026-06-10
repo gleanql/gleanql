@@ -165,6 +165,7 @@ function toRef(value: GraphRef | unknown): GraphRef | undefined {
   return undefined;
 }
 
-function errorMessage(error: unknown): string {
+/** One rule for stringifying unknown errors, shared across hooks and transports. */
+export function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }

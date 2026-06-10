@@ -8,7 +8,7 @@ import {
   type IntrospectionSchema,
   type IntrospectionType,
 } from "./introspection.js";
-import { indent } from "./ts-render.js";
+import { indent, propKey } from "./ts-render.js";
 
 /**
  * Generate the `SchemaModel` source (`defineSchema({...})`) the compiler and
@@ -59,7 +59,7 @@ function renderType(type: IntrospectionType): string | undefined {
   const parts: string[] = [`name: ${JSON.stringify(type.name)}`, `kind: ${JSON.stringify(kind)}`];
 
   if ((type.kind === "OBJECT" || type.kind === "INTERFACE") && type.fields) {
-    const fields = type.fields.map((f) => `${jsonKey(f.name)}: ${renderField(f)}`);
+    const fields = type.fields.map((f) => `${propKey(f.name)}: ${renderField(f)}`);
     parts.push(`fields: { ${fields.join(", ")} }`);
   }
   if (type.kind === "UNION" && type.possibleTypes) {
@@ -78,9 +78,4 @@ function renderField(field: IntrospectionField): string {
     parts.push(`args: [${args.join(", ")}]`);
   }
   return `{ ${parts.join(", ")} }`;
-}
-
-/** A bare identifier key when safe, else a quoted key. */
-function jsonKey(name: string): string {
-  return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name) ? name : JSON.stringify(name);
 }

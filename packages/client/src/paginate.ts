@@ -18,6 +18,7 @@ import {
   type GraphRef,
   type GraphRequestContext,
   type PathStep,
+  errorMessage,
 } from "./index.js";
 import type { GraphRuntime } from "./runtime.js";
 
@@ -124,7 +125,7 @@ export async function paginateConnection(params: PaginateConnectionParams): Prom
       page.context as GraphRequestContext,
     );
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    return { ok: false, error: errorMessage(err) };
   }
   if (result?.errors?.length) return { ok: false, error: result.errors[0]!.message };
 

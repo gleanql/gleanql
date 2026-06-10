@@ -21,6 +21,7 @@ import {
   type MutationResult,
   type RunMutationOptions,
   type UserError,
+  errorMessage,
 } from "./index.js";
 import type { SchemaModel } from "@gleanql/core";
 import { maskViolations, useTracked } from "./reactivity.js";
@@ -37,6 +38,13 @@ export { affectedDigest } from "./reactivity.js";
 export { buildPageOperation, type MergeHelpers } from "./paginate.js";
 export { paginateConnection, buildComponentOperation };
 export type { UsePaginatedOptions, UsePaginatedResult };
+
+/** The latest render's value behind a stable ref — so a stable callback always sees fresh options. */
+function useLatest<T>(value: T): { readonly current: T } {
+  const ref = useRef(value);
+  ref.current = value;
+  return ref;
+}
 
 /**
  * The client-side runtime glue, shared by both hydration models. The generated
@@ -669,10 +677,8 @@ export function createGraphClient(opts: GraphClientOptions): GraphClient {
     const [isLoading, setLoading] = useState(false);
     const [error, setError] = useState<string | undefined>(undefined);
 
-    // The connection value is fresh each render; keep the latest in a ref so the
-    // stable `fetchMore` always sees the current page's ref/trail.
-    const latest = useRef(connection);
-    latest.current = connection;
+    // The connection value is fresh each render; the stable `fetchMore` reads it here.
+    const latest = useLatest(connection);
     const merge = options?.merge;
 
     const fetchMore = useCallback(
@@ -715,9 +721,8 @@ export function createGraphClient(opts: GraphClientOptions): GraphClient {
     // re-renders fine-grained when that entity's record changes.
     const [state, setState] = useState<MutationState<TData>>({ isLoading: false, userErrors: [] });
 
-    // Options are fresh each render; keep the latest so the stable `mutate` sees them.
-    const latestOptions = useRef(options);
-    latestOptions.current = options;
+    // Options are fresh each render; the stable `mutate` reads them here.
+    const latestOptions = useLatest(options);
 
     const mutate = useCallback(
       async (vars: TVars): Promise<MutationResult<TData>> => {
@@ -776,9 +781,8 @@ export function createGraphClient(opts: GraphClientOptions): GraphClient {
   ): SubscriptionState<TData> {
     ensure();
     const [state, setState] = useState<SubscriptionState<TData>>({});
-    // Options are fresh each render; keep the latest so the stream's callbacks see them.
-    const latest = useRef(options);
-    latest.current = options;
+    // Options are fresh each render; the stream's callbacks read them here.
+    const latest = useLatest(options);
     // Re-open the stream only when the operation or its variables change.
     const varsKey = JSON.stringify(options?.variables ?? null);
 
@@ -882,7 +886,7 @@ export function runBoundSubscription<TData = unknown, TVars = Record<string, unk
         }
       }
     } catch (err) {
-      if (active) onError?.(err instanceof Error ? err.message : String(err));
+      if (active) onError?.(errorMessage(err));
     }
   })();
 

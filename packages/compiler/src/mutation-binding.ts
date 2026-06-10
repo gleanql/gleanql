@@ -1,6 +1,6 @@
 import type ts from "typescript";
 import type { OperationKind } from "@gleanql/core";
-import type { AstFacade } from "./ast-facade.js";
+import { isFunctionLike, type AstFacade } from "./ast-facade.js";
 
 /**
  * Selector-hook call-site discovery, shared by the analyzer and the build-time
@@ -60,7 +60,7 @@ export function findSelectorHookSites(root: ts.Node, ast: AstFacade): SelectorHo
       const kind = SELECTOR_HOOKS[node.expression.text];
       if (kind) {
         const selector = node.arguments[0];
-        if (selector && (ast.isArrowFunction(selector) || ast.isFunctionExpression(selector))) {
+        if (selector && isFunctionLike(ast, selector)) {
           const accessorName = paramName(selector.parameters[0], ast);
           const field = accessorName ? firstRootField(selector, accessorName, ast) : undefined;
           if (field) {
@@ -99,7 +99,7 @@ function componentNameOf(node: ts.Node, ast: AstFacade): string | undefined {
     ast.isVariableDeclaration(node) &&
     ast.isIdentifier(node.name) &&
     node.initializer &&
-    (ast.isArrowFunction(node.initializer) || ast.isFunctionExpression(node.initializer))
+    isFunctionLike(ast, node.initializer)
   ) {
     return node.name.text;
   }

@@ -136,7 +136,7 @@ describe("genServerJs", () => {
   it("emits a custom resolver when requestScope is { import, from }", () => {
     const custom = genServerJs({ import: "activeGraph", from: "@/graph-scope" });
     expect(custom).toContain('import { activeGraph } from "@/graph-scope";');
-    expect(custom).toContain("return activeGraph() || null;");
+    expect(custom).toContain("return (activeGraph()) || null;");
     expect(custom).not.toContain("rwsdk/worker");
   });
 

@@ -1,4 +1,5 @@
 import type { OperationArtifact, SchemaModel, SelectionSet } from "@gleanql/core";
+import { SCALARS } from "../render.js";
 
 /**
  * Generated result/variable types for every operation, rendered into the glue
@@ -7,14 +8,6 @@ import type { OperationArtifact, SchemaModel, SelectionSet } from "@gleanql/core
  * dynamic names. Types are derived from the compiled selection walked against
  * the schema model, so they match exactly what the operation can return.
  */
-
-const SCALARS: Record<string, string> = {
-  ID: "string",
-  String: "string",
-  Int: "number",
-  Float: "number",
-  Boolean: "boolean",
-};
 
 /** GraphQL type ref → TS, e.g. `String!` → string, `[Int!]` → ReadonlyArray<number> | null. */
 function tsOfTypeRef(ref: string, schema: SchemaModel): string {

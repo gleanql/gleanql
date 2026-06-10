@@ -47,9 +47,9 @@ interface Ctx {
 function renderTypeBlock(type: IntrospectionType, ctx: Ctx): string | undefined {
   switch (type.kind) {
     case "OBJECT":
-      return renderObject(type, ctx, type.name);
+      return renderObjectLike(type, ctx, JSON.stringify(type.name));
     case "INTERFACE":
-      return renderInterface(type, ctx);
+      return renderObjectLike(type, ctx, typenameUnionOf(type));
     case "UNION":
       return renderUnion(type);
     case "ENUM":
@@ -61,20 +61,15 @@ function renderTypeBlock(type: IntrospectionType, ctx: Ctx): string | undefined 
   }
 }
 
-function renderObject(type: IntrospectionType, ctx: Ctx, typename: string): string {
-  const members: string[] = [`  __typename: ${JSON.stringify(typename)};`];
-  for (const field of type.fields ?? []) {
-    members.push("  " + renderFieldMember(field.name, field.args, field.type, ctx));
-  }
-  return `export interface ${type.name} {\n${members.join("\n")}\n}`;
+/** An interface's `__typename` is the union of its possible types; an object's is its own name. */
+function typenameUnionOf(type: IntrospectionType): string {
+  return type.possibleTypes && type.possibleTypes.length > 0
+    ? type.possibleTypes.map((p) => JSON.stringify(namedTypeName(p))).join(" | ")
+    : "string";
 }
 
-function renderInterface(type: IntrospectionType, ctx: Ctx): string {
-  const typenameUnion =
-    type.possibleTypes && type.possibleTypes.length > 0
-      ? type.possibleTypes.map((p) => JSON.stringify(namedTypeName(p))).join(" | ")
-      : "string";
-  const members: string[] = [`  __typename: ${typenameUnion};`];
+function renderObjectLike(type: IntrospectionType, ctx: Ctx, typenameTs: string): string {
+  const members: string[] = [`  __typename: ${typenameTs};`];
   for (const field of type.fields ?? []) {
     members.push("  " + renderFieldMember(field.name, field.args, field.type, ctx));
   }
