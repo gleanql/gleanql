@@ -1,4 +1,5 @@
 import { DocsLayout } from "../layout";
+import { Code } from "../code";
 
 export function CompilerPage() {
   return (
@@ -9,14 +10,31 @@ export function CompilerPage() {
       that become the operation — behind a swappable backend seam.</p>
 
       <h2>Entry points</h2>
-{/* prettier-ignore */}
-<pre><code><span className="c">{"// one-shot convenience (builds a backend, analyzes one file)"}</span>{"\nanalyzeWithTs({ fileName, supportDir, schema }) → "}<span className="t">{"AnalyzeResult"}</span>{"\n\n"}<span className="c">{"// long-lived backend (used by the Vite plugin)"}</span>{"\n"}<span className="k">{"const"}</span>{" backend = "}<span className="k">{"new"}</span>{" "}<span className="t">{"TsBackend"}</span>{"({ fileNames, supportDir });\nanalyzeFile({ fileName, backend, schema }) → "}<span className="t">{"AnalyzeResult"}</span>{"\n\n"}<span className="k">{"interface"}</span>{" "}<span className="t">{"AnalyzeResult"}</span>{" {\n  operations: readonly "}<span className="t">{"OperationArtifact"}</span>{"[]; "}<span className="c">{"// one per route entrypoint"}</span>{"\n  readMap: "}<span className="t">{"ReadMap"}</span>{";                       "}<span className="c">{"// merged across the file"}</span>{"\n  diagnostics: readonly "}<span className="t">{"Diagnostic"}</span>{"[];\n}"}</code></pre>
+<Code lang="tsx">{`
+// one-shot convenience (builds a backend, analyzes one file)
+analyzeWithTs({ fileName, supportDir, schema }) → AnalyzeResult
+
+// long-lived backend (used by the Vite plugin)
+const backend = new TsBackend({ fileNames, supportDir });
+analyzeFile({ fileName, backend, schema }) → AnalyzeResult
+
+interface AnalyzeResult {
+  operations: readonly OperationArtifact[]; // one per route entrypoint
+  readMap: ReadMap;                       // merged across the file
+  diagnostics: readonly Diagnostic[];
+}
+`}</Code>
 
       <h2>How graph types are recognized</h2>
       <p>A type is graph-backed if it has a literal <code>__typename</code> property — which is genuinely the
       GraphQL <code>__typename</code> of an object. So userland types are plain interfaces, no special brand symbol:</p>
-{/* prettier-ignore */}
-<pre><code><span className="k">{"interface"}</span>{" "}<span className="t">{"Product"}</span>{" {\n  __typename: "}<span className="s">{"\"Product\""}</span>{";   "}<span className="c">{"// ← the brand the backend reads"}</span>{"\n  id: string; title: string; featuredImage: "}<span className="t">{"Image"}</span>{" | "}<span className="k">{"null"}</span>{"; …\n}\n"}<span className="k">{"type"}</span>{" "}<span className="t">{"SearchResultItem"}</span>{" = "}<span className="t">{"Product"}</span>{" | "}<span className="t">{"Collection"}</span>{"; "}<span className="c">{"// union → [\"Product\",\"Collection\"]"}</span></code></pre>
+<Code lang="tsx">{`
+interface Product {
+  __typename: "Product";   // ← the brand the backend reads
+  id: string; title: string; featuredImage: Image | null; …
+}
+type SearchResultItem = Product | Collection; // union → ["Product","Collection"]
+`}</Code>
       <p>The <code>TsBackend</code> reads the literal(s) via a real <code>ts.TypeChecker</code>; a union yields multiple
       names (used for <code>__typename</code> narrowing). Field <em>types</em> for nested walking come from the
       schema model, which is authoritative about list-ness, arguments, and identity.</p>
@@ -74,13 +92,27 @@ indexRegistries     module-level \`const x = glean.components({…})\`
       <div className="two-col">
         <div>
           <div className="col-label">Simple — a pure context path</div>
-{/* prettier-ignore */}
-<pre><code>{"glean.product({ handle: params.handle })\n\n"}<span className="c">{"// $handle; factory returns ctx.params.handle"}</span>{"\n"}<span className="k">{"export function"}</span>{" "}<span className="f">{"getProductRouteVariables"}</span>{"(ctx) {\n  "}<span className="k">{"return"}</span>{" { handle: ctx.params.handle };\n}"}</code></pre>
+<Code lang="tsx">{`
+glean.product({ handle: params.handle })
+
+// $handle; factory returns ctx.params.handle
+export function getProductRouteVariables(ctx) {
+  return { handle: ctx.params.handle };
+}
+`}</Code>
         </div>
         <div>
           <div className="col-label">Complex — transformed / lifted</div>
-{/* prettier-ignore */}
-<pre><code><span className="k">{"const"}</span>{" handle = params.handle."}<span className="f">{"toLowerCase"}</span>{"();\nglean.product({ handle });\n\n"}<span className="c">{"// $product_handle; factory reproduces the local"}</span>{"\n"}<span className="k">{"export function"}</span>{" "}<span className="f">{"getProductRouteVariables"}</span>{"(ctx) {\n  "}<span className="k">{"const"}</span>{" handle = ctx.params.handle."}<span className="f">{"toLowerCase"}</span>{"();\n  "}<span className="k">{"return"}</span>{" { product_handle: handle };\n}"}</code></pre>
+<Code lang="tsx">{`
+const handle = params.handle.toLowerCase();
+glean.product({ handle });
+
+// $product_handle; factory reproduces the local
+export function getProductRouteVariables(ctx) {
+  const handle = ctx.params.handle.toLowerCase();
+  return { product_handle: handle };
+}
+`}</Code>
         </div>
       </div>
 
@@ -96,12 +128,13 @@ indexRegistries     module-level \`const x = glean.components({…})\`
       <h2>Interfaces &amp; unions</h2>
       <p><code>node.__typename === "Product"</code> guards narrow the union; the analyzer emits inline fragments —
       fragments are generated internally, never authored by hand.</p>
-{/* prettier-ignore */}
-<pre><code>{`nodes {
+<Code lang="tsx">{`
+nodes {
   __typename
   ... on Product { __typename id title featuredImage { __typename url } }
   ... on Collection { __typename id title image { __typename url } }
-}`}</code></pre>
+}
+`}</Code>
 
       <h2>Lazy boundaries</h2>
       <p>By default, statically reachable fields are eager — even behind conditionals. To defer, wrap in{" "}

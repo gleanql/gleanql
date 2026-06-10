@@ -1,4 +1,5 @@
 import { DocsLayout } from "../layout";
+import { Code } from "../code";
 
 export function CodegenPage() {
   return (
@@ -18,15 +19,32 @@ export function CodegenPage() {
       </table>
 
       <h2>Usage</h2>
-{/* prettier-ignore */}
-<pre><code><span className="k">{"import"}</span>{" { introspectionFromSchema, buildSchema } "}<span className="k">{"from"}</span>{" "}<span className="s">{"\"graphql\""}</span>{"; "}<span className="c">{"// or your live introspection"}</span>{"\n"}<span className="k">{"import"}</span>{" { "}<span className="f">{"generateSchemaPackage"}</span>{" } "}<span className="k">{"from"}</span>{" "}<span className="s">{"\"@gleanql/codegen\""}</span>{";\n\n"}<span className="k">{"const"}</span>{" { schemaModel, types, graph } = "}<span className="f">{"generateSchemaPackage"}</span>{"(\n  introspectionFromSchema(buildSchema(sdl)).__schema,\n  { scalarTypes: { DateTime: "}<span className="s">{"\"string\""}</span>{", Decimal: "}<span className="s">{"\"string\""}</span>{" } }, "}<span className="c">{"// custom scalars"}</span>{"\n);\n"}<span className="c">{"// write schemaModel → graph/schema-model.ts, types → graph/schema.ts, graph → graph/graph.ts"}</span></code></pre>
+<Code lang="tsx">{`
+import { introspectionFromSchema, buildSchema } from "graphql"; // or your live introspection
+import { generateSchemaPackage } from "@gleanql/codegen";
+
+const { schemaModel, types, graph } = generateSchemaPackage(
+  introspectionFromSchema(buildSchema(sdl)).__schema,
+  { scalarTypes: { DateTime: "string", Decimal: "string" } }, // custom scalars
+);
+// write schemaModel → graph/schema-model.ts, types → graph/schema.ts, graph → graph/graph.ts
+`}</Code>
 
       <h2>Why branded types</h2>
       <p>To app code these read as ordinary schema types; the compiler recognizes them via the{" "}
       <code>__typename</code> brand. Because nullability and lists are rendered exactly, TypeScript catches API
       drift before runtime:</p>
-{/* prettier-ignore */}
-<pre><code><span className="k">{"export interface"}</span>{" "}<span className="t">{"Product"}</span>{" {\n  __typename: "}<span className="s">{"\"Product\""}</span>{";\n  title: string;                 "}<span className="c">{"// String!  → non-null"}</span>{"\n  descriptionHtml: string | null; "}<span className="c">{"// String   → nullable"}</span>{"\n  featuredImage: "}<span className="t">{"Image"}</span>{" | null;\n  images(args: { first: number }): "}<span className="t">{"Image"}</span>{"[]; "}<span className="c">{"// [Image!]! + field args → callable"}</span>{"\n}\n\n"}<span className="c">{"// product.title now fails to compile if the API drops or renames `title`."}</span></code></pre>
+<Code lang="tsx">{`
+export interface Product {
+  __typename: "Product";
+  title: string;                 // String!  → non-null
+  descriptionHtml: string | null; // String   → nullable
+  featuredImage: Image | null;
+  images(args: { first: number }): Image[]; // [Image!]! + field args → callable
+}
+
+// product.title now fails to compile if the API drops or renames \`title\`.
+`}</Code>
 
       <h2>Loop closure</h2>
       <p>The generator is decoupled from graphql-js — it just transforms the introspection JSON (structural types).

@@ -1,4 +1,5 @@
 import { DocsLayout } from "../layout";
+import { Code } from "../code";
 
 export function IndexPage() {
   return (
@@ -11,14 +12,38 @@ export function IndexPage() {
 
       <h2>The idea in one screen</h2>
       <p>You write plain components. Field access <em>is</em> the data requirement.</p>
-{/* prettier-ignore */}
-<pre><code><span className="k">{"import"}</span>{" { glean } "}<span className="k">{"from"}</span>{" "}<span className="s">{"\"~/graph\""}</span>{";\n"}<span className="k">{"import type"}</span>{" { Product } "}<span className="k">{"from"}</span>{" "}<span className="s">{"\"~/graph/schema\""}</span>{";\n\n"}<span className="k">{"export default function"}</span>{" "}<span className="f">{"ProductRoute"}</span>{"({ params }) {\n  "}<span className="k">{"const"}</span>{" product = glean."}<span className="f">{"product"}</span>{"({ handle: params.handle });\n  "}<span className="k">{"return"}</span>{" <><"}<span className="t">{"ProductHero"}</span>{" product={product} /><"}<span className="t">{"BuyBox"}</span>{" product={product} /></>;\n}\n\n"}<span className="k">{"function"}</span>{" "}<span className="f">{"BuyBox"}</span>{"({ product }: { product: "}<span className="t">{"Product"}</span>{" }) {\n  "}<span className="k">{"const"}</span>{" price = product.priceRange.minVariantPrice;\n  "}<span className="k">{"return"}</span>{" <button>{price.amount} {price.currencyCode}</button>;\n}"}</code></pre>
+<Code lang="tsx">{`
+import { glean } from "~/graph";
+import type { Product } from "~/graph/schema";
+
+export default function ProductRoute({ params }) {
+  const product = glean.product({ handle: params.handle });
+  return <><ProductHero product={product} /><BuyBox product={product} /></>;
+}
+
+function BuyBox({ product }: { product: Product }) {
+  const price = product.priceRange.minVariantPrice;
+  return <button>{price.amount} {price.currencyCode}</button>;
+}
+`}</Code>
 
       <p>The compiler reads those property accesses across the whole route, follows the value through JSX
       props, de-duplicates, and emits one operation — plus a variables factory and a per-component read map:</p>
 
-{/* prettier-ignore */}
-<pre><code><span className="k">{"query"}</span>{" "}<span className="t">{"ProductRoute"}</span>{"($handle: String!) {\n  product(handle: $handle) {\n    __typename\n    id\n    title\n    featuredImage { __typename url }\n    priceRange {\n      __typename\n      minVariantPrice { __typename amount currencyCode }\n    }\n  }\n}"}</code></pre>
+<Code lang="graphql">{`
+query ProductRoute($handle: String!) {
+  product(handle: $handle) {
+    __typename
+    id
+    title
+    featuredImage { __typename url }
+    priceRange {
+      __typename
+      minVariantPrice { __typename amount currencyCode }
+    }
+  }
+}
+`}</Code>
 
       <div className="note"><strong>No GraphQL in app code.</strong> No hand-written fragments, no <code>select</code> blocks,
       no <code>dataComponent(...)</code> wrappers, no exposed <code>ProductRef</code> type. Userland types look like

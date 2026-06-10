@@ -1,13 +1,22 @@
 name: Deploy docs
 
-# Manually triggered: builds the docs RedwoodSDK app and deploys it to
-# Cloudflare Workers. Requires the CLOUDFLARE_API_TOKEN repository secret
-# (a token with Workers Scripts edit rights; wrangler reads it from the env).
+# Deploys the docs RedwoodSDK app to Cloudflare Workers (gleanql.com) on every
+# docs change that lands on main — plus on demand. Requires the
+# CLOUDFLARE_API_TOKEN repository secret (Workers Scripts edit + the zone).
 on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - ".github/workflows/deploy-docs.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: deploy-docs
+  cancel-in-progress: true
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true

@@ -1,7 +1,10 @@
+import { MenuButton, Search, ThemeToggle, Toc } from "./islands";
+
 /**
- * The shared docs chrome: brand + sidebar nav on the left, the page's article on
- * the right. `active` is the page's path (e.g. "usage.html") — the matching nav
- * link gets the `active` class, exactly like the static site did.
+ * The docs chrome: sticky top bar (brand · ⌘K search · GitHub · theme), grouped
+ * sidebar with the harvest-gold active rail, the article column (kicker derived
+ * from the active page's group), prev/next footer cards, and the scroll-spy
+ * "On this page" rail. `active` is the page's path (e.g. "usage.html").
  */
 
 export interface NavPage {
@@ -42,30 +45,84 @@ export const NAV_GROUPS: ReadonlyArray<{ readonly group: string; readonly pages:
   },
 ];
 
+const FLAT = NAV_GROUPS.flatMap((g) => g.pages.map((p) => ({ ...p, group: g.group })));
+
 export function DocsLayout({ active, children }: { active: string; children: React.ReactNode }) {
+  const index = FLAT.findIndex((p) => p.href === active);
+  const current = FLAT[index];
+  const prev = index > 0 ? FLAT[index - 1] : undefined;
+  const next = index >= 0 && index < FLAT.length - 1 ? FLAT[index + 1] : undefined;
+
   return (
     <>
-      <aside className="sidebar">
-        <div className="brand">
-          glean<span>·</span>graphql
-        </div>
-        <div className="brand-sub">TypeScript-native GraphQL — without the queries</div>
-        <nav>
-          {NAV_GROUPS.map(({ group, pages }) => (
-            <div key={group}>
-              <div className="group">{group}</div>
-              {pages.map(({ href, label }) => (
-                <a key={href} href={`/${href}`} className={href === active ? "active" : undefined}>
-                  {label}
-                </a>
-              ))}
-            </div>
-          ))}
-        </nav>
-      </aside>
-      <main>
-        <article>{children}</article>
-      </main>
+      <header className="topbar">
+        <MenuButton />
+        <a className="brand" href="/">
+          <span className="mark">✳</span>
+          glean
+          <span className="tag">docs</span>
+        </a>
+        <div className="topbar-spacer" />
+        <Search />
+        <a
+          className="icon-btn"
+          href="https://github.com/gleanql/gleanql"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="GitHub"
+          title="GitHub"
+        >
+          ↗
+        </a>
+        <ThemeToggle />
+      </header>
+
+      <div className="shell">
+        <aside className="sidebar">
+          <nav>
+            {NAV_GROUPS.map(({ group, pages }) => (
+              <div key={group}>
+                <div className="group">{group}</div>
+                {pages.map(({ href, label }) => (
+                  <a key={href} href={`/${href}`} className={href === active ? "active" : undefined}>
+                    {label}
+                  </a>
+                ))}
+              </div>
+            ))}
+          </nav>
+        </aside>
+
+        <main>
+          <article>
+            {current ? <div className="kicker">{current.group}</div> : null}
+            {children}
+
+            {(prev || next) && (
+              <nav className="pagenav">
+                {prev ? (
+                  <a href={`/${prev.href}`}>
+                    <span className="dir">← Previous</span>
+                    <span className="title">{prev.label}</span>
+                  </a>
+                ) : (
+                  <span />
+                )}
+                {next ? (
+                  <a className="next" href={`/${next.href}`}>
+                    <span className="dir">Next →</span>
+                    <span className="title">{next.label}</span>
+                  </a>
+                ) : null}
+              </nav>
+            )}
+          </article>
+        </main>
+
+        <aside className="toc">
+          <Toc />
+        </aside>
+      </div>
     </>
   );
 }

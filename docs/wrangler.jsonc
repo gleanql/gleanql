@@ -14,5 +14,12 @@
 
   "observability": {
     "enabled": true
-  }
+  },
+
+  // The docs live at the apex. Requires the gleanql.com zone on the same
+  // Cloudflare account as the worker (custom domains auto-manage DNS + certs).
+  "routes": [
+    { "pattern": "gleanql.com", "custom_domain": true },
+    { "pattern": "www.gleanql.com", "custom_domain": true }
+  ]
 }

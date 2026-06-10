@@ -1,4 +1,5 @@
 import { DocsLayout } from "../layout";
+import { Code } from "../code";
 
 export function VitePage() {
   return (
@@ -13,8 +14,17 @@ export function VitePage() {
       <p>One line in <code>vite.config.mts</code> — just the schema. Routes are
       discovered automatically (any file that opens a <code>graph</code> root), so there's
       nothing to keep in sync as pages come and go:</p>
-{/* prettier-ignore */}
-<pre><code><span className="k">{"import"}</span>{" { defineConfig } "}<span className="k">{"from"}</span>{" "}<span className="s">{"\"vite\""}</span>{";\n"}<span className="k">{"import"}</span>{" { "}<span className="f">{"glean"}</span>{" } "}<span className="k">{"from"}</span>{" "}<span className="s">{"\"@gleanql/vite\""}</span>{";\n\n"}<span className="k">{"export default"}</span>{" "}<span className="f">{"defineConfig"}</span>{"({\n  plugins: [\n    "}<span className="f">{"glean"}</span>{"({ schema: "}<span className="s">{"\"schema.graphql\""}</span>{" }),\n    "}<span className="f">{"redwood"}</span>{"(),\n  ],\n});"}</code></pre>
+<Code lang="tsx">{`
+import { defineConfig } from "vite";
+import { glean } from "@gleanql/vite";
+
+export default defineConfig({
+  plugins: [
+    glean({ schema: "schema.graphql" }),
+    redwood(),
+  ],
+});
+`}</Code>
       <p>A route is any module that calls a <code>graph</code> root — <code>glean.product(...)</code> —
       the same signal the analyzer uses to mint an operation. Pass an explicit{" "}
       <code>routes: [...]</code> array to override discovery (e.g. an aliased <code>glean</code>{" "}
@@ -74,8 +84,13 @@ export function VitePage() {
       <h2>Type-check backend (<code>typescript</code> / <code>tsgo</code>)</h2>
       <p>Route analysis routes every type/symbol question through the <a href="/architecture.html">backend seam</a>, so
       the engine is swappable behind one option:</p>
-{/* prettier-ignore */}
-<pre><code><span className="c">{"// default — the in-process TypeScript compiler"}</span>{"\n"}<span className="f">{"glean"}</span>{"({ schema })\n\n"}<span className="c">{"// experimental Go-native engine"}</span>{"\n"}<span className="f">{"glean"}</span>{"({ schema, backend: "}<span className="s">{"\"tsgo\""}</span>{" })"}</code></pre>
+<Code lang="tsx">{`
+// default — the in-process TypeScript compiler
+glean({ schema })
+
+// experimental Go-native engine
+glean({ schema, backend: "tsgo" })
+`}</Code>
       <ul>
         <li><strong><code>"typescript"</code> (default).</strong> The in-process compiler — a real <code>ts.Program</code>{" "}
           + <code>TypeChecker</code>, built once over all files (the{" "}
@@ -93,8 +108,16 @@ export function VitePage() {
       <p>Everything framework-specific lives behind a <strong><code>FrameworkPreset</code></strong>{" "}
       (<code>src/types.ts</code> + <code>src/presets/</code>). The core pipeline (<code>generate.ts</code>/<code>index.ts</code>)
       is neutral and delegates; adding a framework is a new preset, not a new branch.</p>
-{/* prettier-ignore */}
-<pre><code><span className="c">{"// default — RedwoodSDK (RSC)"}</span>{"\n"}<span className="f">{"glean"}</span>{"({ schema })\n\n"}<span className="c">{"// React Router 7 (isomorphic SSR — not RSC)"}</span>{"\n"}<span className="f">{"glean"}</span>{"({ schema, framework: "}<span className="s">{"\"react-router\""}</span>{" })\n\n"}<span className="c">{"// or a custom preset object"}</span>{"\n"}<span className="f">{"glean"}</span>{"({ schema, framework: myPreset })"}</code></pre>
+<Code lang="tsx">{`
+// default — RedwoodSDK (RSC)
+glean({ schema })
+
+// React Router 7 (isomorphic SSR — not RSC)
+glean({ schema, framework: "react-router" })
+
+// or a custom preset object
+glean({ schema, framework: myPreset })
+`}</Code>
       <p>A preset owns every framework-specific decision:</p>
       <table>
         <tr><th>Preset field</th><th>What it owns</th></tr>

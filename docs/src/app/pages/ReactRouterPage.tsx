@@ -1,4 +1,5 @@
 import { DocsLayout } from "../layout";
+import { Code } from "../code";
 
 export function ReactRouterPage() {
   return (
@@ -22,25 +23,50 @@ export function ReactRouterPage() {
       <code>GraphScope</code>: on the server an <code>AsyncLocalStorage</code> isolates concurrent requests; on the client
       it is a singleton. The app exposes a <strong>universal</strong>, client-safe scope module (no{" "}
       <code>node:async_hooks</code>) — the <code>requestScope</code> the generated accessor and client glue resolve from:</p>
-{/* prettier-ignore */}
-<pre><code><span className="c">{"// app/graph-scope.ts — UNIVERSAL (loads in both bundles)"}</span>{"\n"}<span className="k">{"import"}</span>{" { GraphScope } "}<span className="k">{"from"}</span>{" "}<span className="s">{"\"@gleanql/client\""}</span>{";\n"}<span className="k">{"export const"}</span>{" scope = "}<span className="k">{"new"}</span>{" "}<span className="f">{"GraphScope"}</span>{"();          "}<span className="c">{"// client: singleton"}</span>{"\n"}<span className="k">{"export const"}</span>{" "}<span className="f">{"activeGraph"}</span>{" = () => scope."}<span className="f">{"current"}</span>{"();  "}<span className="c">{"// the accessor's resolver"}</span></code></pre>
-{/* prettier-ignore */}
-<pre><code><span className="c">{"// app/graph.server.ts — SERVER-ONLY (.server keeps node:async_hooks out of the client)"}</span>{"\n"}<span className="k">{"import"}</span>{" { AsyncLocalStorage } "}<span className="k">{"from"}</span>{" "}<span className="s">{"\"node:async_hooks\""}</span>{";\n"}<span className="k">{"import"}</span>{" { scope } "}<span className="k">{"from"}</span>{" "}<span className="s">{"\"~/graph-scope\""}</span>{";\nscope."}<span className="f">{"attachAls"}</span>{"("}<span className="k">{"new"}</span>{" "}<span className="f">{"AsyncLocalStorage"}</span>{"());        "}<span className="c">{"// upgrade the shared scope to per-request isolation"}</span>{"\n"}<span className="k">{"export const"}</span>{" integration = "}<span className="f">{"createGraphIntegration"}</span>{"({ schema, operations, adapter });"}</code></pre>
+<Code lang="tsx">{`
+// app/graph-scope.ts — UNIVERSAL (loads in both bundles)
+import { GraphScope } from "@gleanql/client";
+export const scope = new GraphScope();          // client: singleton
+export const activeGraph = () => scope.current();  // the accessor's resolver
+`}</Code>
+<Code lang="tsx">{`
+// app/graph.server.ts — SERVER-ONLY (.server keeps node:async_hooks out of the client)
+import { AsyncLocalStorage } from "node:async_hooks";
+import { scope } from "~/graph-scope";
+scope.attachAls(new AsyncLocalStorage());        // upgrade the shared scope to per-request isolation
+export const integration = createGraphIntegration({ schema, operations, adapter });
+`}</Code>
 
       <h2>Setup</h2>
       <p>One line wires the build (the preset scans <code>app/</code>, points the accessor at the scope module, and emits
       isomorphic client glue). <code>~</code> is the app alias; <code>ssr.noExternal</code> lets Vite apply that alias inside
       the generated glue (which lives in <code>node_modules</code>).</p>
-{/* prettier-ignore */}
-<pre><code><span className="c">{"// vite.config.ts"}</span>{"\n"}<span className="k">{"export default"}</span>{" "}<span className="f">{"defineConfig"}</span>{"({\n  resolve: { alias: [{ find: /^~\\//, replacement: appDir + "}<span className="s">{"\"/\""}</span>{" }] },\n  ssr: { noExternal: ["}<span className="s">{"\"@gleanql/client\""}</span>{"] },\n  plugins: [\n    "}<span className="f">{"glean"}</span>{"({ schema: "}<span className="s">{"\"schema.graphql\""}</span>{", framework: "}<span className="s">{"\"react-router\""}</span>{", endpoint: "}<span className="s">{"\"/graphql\""}</span>{" }),\n    "}<span className="f">{"reactRouter"}</span>{"(),\n  ],\n});"}</code></pre>
+<Code lang="tsx">{`
+// vite.config.ts
+export default defineConfig({
+  resolve: { alias: [{ find: /^~\\//, replacement: appDir + "/" }] },
+  ssr: { noExternal: ["@gleanql/client"] },
+  plugins: [
+    glean({ schema: "schema.graphql", framework: "react-router", endpoint: "/graphql" }),
+    reactRouter(),
+  ],
+});
+`}</Code>
 
       <h2>Per request — the loader→render handoff</h2>
       <p>A root <code>middleware</code> preloads the matched route's operation and wraps both the loaders <em>and</em> the
       document render in one <code>scope.run(...)</code>, so <code>glean.product(...)</code> resolves to this request's
       seeded runtime everywhere it's read. (Server-only export; React Router strips it — and its <code>graph.server</code>{" "}
       import — from the client bundle.)</p>
-{/* prettier-ignore */}
-<pre><code><span className="c">{"// app/root.tsx"}</span>{"\n"}<span className="k">{"export const"}</span>{" middleware = [\n  "}<span className="k">{"async"}</span>{" ({ request }, next) => {\n    "}<span className="k">{"const"}</span>{" active = "}<span className="k">{"await"}</span>{" "}<span className="f">{"preloadForRequest"}</span>{"(request);   "}<span className="c">{"// integration.preload(...)"}</span>{"\n    "}<span className="k">{"return"}</span>{" active ? scope."}<span className="f">{"run"}</span>{"(active, () => "}<span className="f">{"next"}</span>{"()) : "}<span className="f">{"next"}</span>{"();\n  },\n];"}</code></pre>
+<Code lang="tsx">{`
+// app/root.tsx
+export const middleware = [
+  async ({ request }, next) => {
+    const active = await preloadForRequest(request);   // integration.preload(...)
+    return active ? scope.run(active, () => next()) : next();
+  },
+];
+`}</Code>
 
       <h2>Serialize &amp; hydrate (loader data, not a script)</h2>
       <p>The root loader serializes this request's cache; React Router ships it as loader data on the initial HTML{" "}
@@ -48,20 +74,40 @@ export function ReactRouterPage() {
       child routes read warm on the very first hydration pass (no waterfall, no mismatch). On first load it builds the
       client runtime on the shared scope; later navigations merge the new snapshot
       (<code>absorbHydrationPayload</code>).</p>
-{/* prettier-ignore */}
-<pre><code><span className="c">{"// app/root.tsx"}</span>{"\n"}<span className="k">{"export function"}</span>{" "}<span className="f">{"loader"}</span>{"() { "}<span className="k">{"return"}</span>{" { graphPayload: "}<span className="f">{"activePayload"}</span>{"() ?? "}<span className="k">{"null"}</span>{" }; }\n\n"}<span className="k">{"export default function"}</span>{" "}<span className="f">{"App"}</span>{"() {\n  "}<span className="k">{"const"}</span>{" { graphPayload } = "}<span className="f">{"useLoaderData"}</span>{"();\n  "}<span className="f">{"hydrate"}</span>{"(graphPayload ?? "}<span className="k">{"undefined"}</span>{");   "}<span className="c">{"// build (first load) / merge (navigation); no-op on the server"}</span>{"\n  "}<span className="k">{"return"}</span>{" <"}<span className="f">{"Outlet"}</span>{" />;\n}"}</code></pre>
+<Code lang="tsx">{`
+// app/root.tsx
+export function loader() { return { graphPayload: activePayload() ?? null }; }
+
+export default function App() {
+  const { graphPayload } = useLoaderData();
+  hydrate(graphPayload ?? undefined);   // build (first load) / merge (navigation); no-op on the server
+  return <Outlet />;
+}
+`}</Code>
 
       <h2>Components &amp; islands</h2>
       <p>Route components read the graph directly — the same code on server and client:</p>
-{/* prettier-ignore */}
-<pre><code><span className="k">{"import"}</span>{" { glean } "}<span className="k">{"from"}</span>{" "}<span className="s">{"\"@gleanql/client\""}</span>{";\n"}<span className="k">{"export default function"}</span>{" "}<span className="f">{"Product"}</span>{"({ params }) {\n  "}<span className="k">{"const"}</span>{" product = glean."}<span className="f">{"product"}</span>{"({ handle: params.handle });   "}<span className="c">{"// warm: SSR + client"}</span>{"\n  "}<span className="k">{"return"}</span>{" <"}<span className="f">{"ProductHero"}</span>{" product={product} />;\n}"}</code></pre>
+<Code lang="tsx">{`
+import { glean } from "@gleanql/client";
+export default function Product({ params }) {
+  const product = glean.product({ handle: params.handle });   // warm: SSR + client
+  return <ProductHero product={product} />;
+}
+`}</Code>
       <p>Client-interactive bits are ordinary components (no <code>"use client"</code>). The generated{" "}
       <code>@gleanql/client/client</code> exposes <code>useGlean()</code> (the shared graph, re-rendering fine-grained — only
       on the records a component read) plus <code>usePaginated</code>, <code>useMutation</code>, and <code>refresh</code>.{" "}
       <code>useGlean()</code> and the <code>glean</code> accessor resolve the same runtime, so there is no hydration
       mismatch.</p>
-{/* prettier-ignore */}
-<pre><code><span className="k">{"import"}</span>{" { useGlean, refresh } "}<span className="k">{"from"}</span>{" "}<span className="s">{"\"@gleanql/client/client\""}</span>{";\n\n"}<span className="k">{"const"}</span>{" glean = "}<span className="f">{"useGlean"}</span>{"();\n"}<span className="k">{"const"}</span>{" views = glean?."}<span className="f">{"product"}</span>{"({ handle }).views;\n"}<span className="c">{"// bare refresh() inside a component → the build binds it to this component's"}</span>{"\n"}<span className="c">{"// read-map, refetching ONLY product.views — a pruned query, not the whole page op"}</span>{"\n<button onClick={() => "}<span className="f">{"refresh"}</span>{"()}>Refresh</button>"}</code></pre>
+<Code lang="tsx">{`
+import { useGlean, refresh } from "@gleanql/client/client";
+
+const glean = useGlean();
+const views = glean?.product({ handle }).views;
+// bare refresh() inside a component → the build binds it to this component's
+// read-map, refetching ONLY product.views — a pruned query, not the whole page op
+<button onClick={() => refresh()}>Refresh</button>
+`}</Code>
       <p><code>refresh("OpName")</code> (or bare <code>refresh()</code> outside a component) re-runs a whole operation;
       a component-bound <code>refresh()</code> re-runs the page's root with a selection pruned to that component's
       read-map (+ identity), so the wire fetches a slice. Both re-seed the normalized cache, which reconciles by identity
@@ -72,8 +118,10 @@ export function ReactRouterPage() {
       glue</strong> beyond the two tiny scope modules above — schema, routes/components, a transport, and the one{" "}
       <code>vite.config.ts</code> line. The build provisions <code>@gleanql/client</code> into <code>node_modules</code> and
       the app imports by package name:</p>
-{/* prettier-ignore */}
-<pre><code><span className="k">{"import"}</span>{" { glean } "}<span className="k">{"from"}</span>{" "}<span className="s">{"\"@gleanql/client\""}</span>{";\n"}<span className="k">{"import type"}</span>{" { Product } "}<span className="k">{"from"}</span>{" "}<span className="s">{"\"@gleanql/client/schema\""}</span>{";"}</code></pre>
+<Code lang="tsx">{`
+import { glean } from "@gleanql/client";
+import type { Product } from "@gleanql/client/schema";
+`}</Code>
       <p>Two routes (<code>/collections/:handle</code>, <code>/products/:handle</code>) compile to two operations; a{" "}
       <code>/graphql</code> resource route serves client refetch. Verified end-to-end: SSR warm reads, the snapshot on the
       loader-data stream (initial + per-navigation <code>.data</code>), field-level refetch, and an{" "}

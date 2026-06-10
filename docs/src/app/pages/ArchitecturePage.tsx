@@ -1,4 +1,5 @@
 import { DocsLayout } from "../layout";
+import { Code } from "../code";
 
 export function ArchitecturePage() {
   return (
@@ -50,23 +51,25 @@ export function ArchitecturePage() {
       <div className="two-col">
         <div>
           <div className="col-label">ProductHero reads</div>
-{/* prettier-ignore */}
-<pre><code>{`Product.title
-Product.featuredImage.url`}</code></pre>
+<Code lang="tsx">{`
+Product.title
+Product.featuredImage.url
+`}</Code>
         </div>
         <div>
           <div className="col-label">BuyBox reads</div>
-{/* prettier-ignore */}
-<pre><code>{`Product.priceRange
+<Code lang="tsx">{`
+Product.priceRange
        .minVariantPrice.amount
 Product.priceRange
-       .minVariantPrice.currencyCode`}</code></pre>
+       .minVariantPrice.currencyCode
+`}</Code>
         </div>
       </div>
 
       <p>The analyzer connects the root call to both components and emits one merged operation:</p>
-{/* prettier-ignore */}
-<pre><code>{`Query.product(handle: params.handle)
+<Code lang="graphql">{`
+Query.product(handle: params.handle)
   ├─ ProductHero reads
   └─ BuyBox reads
         ▼  (one operation)
@@ -81,7 +84,8 @@ query ProductRoute($handle: String!) {
       minVariantPrice { __typename amount currencyCode }
     }
   }
-}`}</code></pre>
+}
+`}</Code>
 
       <h2>Compiler vs. runtime authority (hybrid)</h2>
       <p>The compiler is authoritative for the <em>initial</em> operation; the runtime may fetch fields that were
@@ -101,8 +105,15 @@ query ProductRoute($handle: String!) {
       Because the seam is the only contact point for type info, a Go-based engine
       (tsgo / <code>@typescript/native-preview</code>) plugs in without touching analysis logic — it already does, as an
       experimental <code>backend</code> option.</p>
-{/* prettier-ignore */}
-<pre><code><span className="k">{"interface"}</span>{" "}<span className="t">{"GraphCompilerBackend"}</span>{" {\n  getSourceFile(fileName): ts.SourceFile | "}<span className="k">{"undefined"}</span>{";\n  getGraphTypeNames(node): readonly string[] | "}<span className="k">{"undefined"}</span>{"; "}<span className="c">{"// union → many"}</span>{"\n  getGraphTypeName(node): string | "}<span className="k">{"undefined"}</span>{";\n  isGraphBackedType(node): boolean;\n  resolveDeclaration(node): ts.Declaration | "}<span className="k">{"undefined"}</span>{";\n}"}</code></pre>
+<Code lang="tsx">{`
+interface GraphCompilerBackend {
+  getSourceFile(fileName): ts.SourceFile | undefined;
+  getGraphTypeNames(node): readonly string[] | undefined; // union → many
+  getGraphTypeName(node): string | undefined;
+  isGraphBackedType(node): boolean;
+  resolveDeclaration(node): ts.Declaration | undefined;
+}
+`}</Code>
       <p>The build creates <strong>one</strong> <code>ts.Program</code> over all files and analyzes each route against it
       (<code>analyzeFile</code> + a shared backend), instead of recreating a full program per route — O(routes × files)
       program builds collapse to one. Because all type/symbol queries still go through the seam, the engine stays
