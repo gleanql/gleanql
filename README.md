@@ -74,6 +74,7 @@ Server Components) and **React Router 7** (isomorphic SSR) today.
 
 | App | What it shows |
 |---|---|
+| [`examples/starter`](examples/starter) | The minimal app — one schema, one route, one island. Copy this to start |
 | [`examples/rwsdk-real`](examples/rwsdk-real) | A storefront on RedwoodSDK: islands, live SSE prices, mutations, the persisted allowlist, a typed registered operation |
 | [`examples/rwsdk-todo`](examples/rwsdk-todo) | TodoMVC on a SQLite Durable Object: optimistic add/remove with auto-rollback |
 | [`examples/remix-real`](examples/remix-real) | The same data layer on React Router 7 — no RSC required |

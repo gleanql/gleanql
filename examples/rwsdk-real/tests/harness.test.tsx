@@ -45,7 +45,7 @@ describe("islands through the production hydration path", () => {
       render(
         <>
           <GraphHydrator payload={payload} />
-          <RenameTitle handle="aurora-mug" id={PRODUCT.id} initialTitle="(fallback)" />
+          <RenameTitle handle="aurora-mug" id={PRODUCT.id} />
         </>,
       );
 

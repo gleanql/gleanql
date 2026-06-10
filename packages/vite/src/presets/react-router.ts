@@ -30,6 +30,11 @@ export function reactRouter(opts: ReactRouterPresetOptions = {}): FrameworkPrese
     name: "react-router",
     appDir: opts.appDir ?? "app",
     requestScope,
+    // Never prebundle the generated package here: esbuild's dep scan can't apply
+    // the app's `~/` alias inside the glue (the scope-module import), so the
+    // optimized copy 503s in the browser and the page silently never hydrates.
+    // Excluding it also keeps prebundles from going stale across regenerations.
+    viteConfigPatch: () => ({ optimizeDeps: { exclude: ["@gleanql/client"] } }),
     emitClientGlue: (ctx) => {
       const caps = { mutation: !!ctx.schemaModel.mutationType, subscription: !!ctx.schemaModel.subscriptionType };
       const opts = {

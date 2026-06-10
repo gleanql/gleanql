@@ -20,9 +20,9 @@ import { resolvePreset } from "./presets/index.js";
 import { bindComponentRefresh } from "./refresh-bind.js";
 import { bindSelectorHookOps } from "./mutation-bind.js";
 import { bindUseGleanComponent } from "./useglean-bind.js";
-import type { GraphPluginOptions, GraphVitePlugin } from "./types.js";
+import type { GraphPluginOptions, GraphVitePlugin, GraphViteConfigPatch } from "./types.js";
 
-export type { GraphPluginOptions, GraphVitePlugin, FrameworkPreset, FrameworkOption } from "./types.js";
+export type { GraphPluginOptions, GraphVitePlugin, GraphViteConfigPatch, FrameworkPreset, FrameworkOption } from "./types.js";
 export { rwsdk, reactRouter } from "./presets/index.js";
 export { renderDevtoolsHtml } from "./devtools.js";
 // The pipeline itself — for programmatic builds and the standalone-consumption e2e.
@@ -35,11 +35,16 @@ export function glean(options: GraphPluginOptions): GraphVitePlugin {
   return {
     name: "graph",
     enforce: "pre",
-    async config(): Promise<void> {
+    async config(): Promise<GraphViteConfigPatch> {
       if (!done) {
         generated = await generate(process.cwd(), options, preset);
         done = true;
       }
+      // The dep optimizer vs generated code: a stale prebundle of the generated
+      // package serves outdated operations across sessions ("unknown mutation
+      // operation: …" until .vite is nuked by hand). How to prevent that is
+      // framework-specific — see FrameworkPreset.viteConfigPatch.
+      return preset.viteConfigPatch?.(generated.operations) ?? {};
     },
 
     // Dev-only: `/__glean` renders everything the build compiled — each operation's

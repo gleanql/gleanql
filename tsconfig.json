@@ -27,5 +27,5 @@
     "packages/vite/test",
     "examples"
   ],
-  "exclude": ["**/node_modules/**", "**/dist/**", "**/fixtures/**", "examples/rwsdk-real", "examples/remix-real", "examples/rwsdk-todo"]
+  "exclude": ["**/node_modules/**", "**/dist/**", "**/fixtures/**", "examples/rwsdk-real", "examples/remix-real", "examples/rwsdk-todo", "examples/starter"]
 }

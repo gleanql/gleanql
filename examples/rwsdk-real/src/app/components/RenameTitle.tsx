@@ -9,10 +9,10 @@ import { useGlean, useMutation } from "@gleanql/client/client";
  * the same `product.title` through `useGlean()` — the heading below updates in place,
  * no reload. `isLoading`/`error` come straight off the hook's state.
  */
-export function RenameTitle({ handle, id, initialTitle }: { handle: string; id: string; initialTitle: string }) {
+export function RenameTitle({ handle, id }: { handle: string; id: string }) {
   const glean = useGlean();
   const product = glean?.product({ handle });
-  const title = product?.title ?? initialTitle;
+  const title = product?.title;
 
   const [rename, { isLoading, error }] = useMutation(
     (m, vars: { id: string; title: string }) => m.setProductTitle(vars).title,

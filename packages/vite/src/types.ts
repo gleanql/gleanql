@@ -62,6 +62,15 @@ export interface FrameworkPreset {
   transformRoute?(code: string, file: string, names: ReadonlySet<string>, onWarn?: (m: string) => void): string | null;
   /** Subpath exports beyond the always-present `.`, `./schema`, `./runtime`, `./operations`, `./client`. */
   extraExports?(): Record<string, SubpathExport>;
+  /**
+   * Per-preset vite-config patch, applied after generation. The dep optimizer
+   * is the footgun here: it must either skip the generated package entirely
+   * (react-router — esbuild can't apply the app's `~/` alias inside the glue)
+   * or have its cache key tied to the generated operations (rwsdk — excluding
+   * the package would un-wire the framework's vendored React, but a stale
+   * prebundle serves outdated operations across sessions).
+   */
+  viteConfigPatch?(operations: Record<string, OperationArtifact>): GraphViteConfigPatch;
 }
 
 /** Built-in preset name or a custom preset object. Defaults to `"rwsdk"`. */
@@ -169,10 +178,18 @@ export interface GraphDevServer {
   readonly moduleGraph?: { invalidateAll(): void };
 }
 
+/** The vite-config patch the plugin contributes (merged by vite). */
+export interface GraphViteConfigPatch {
+  readonly optimizeDeps?: {
+    readonly exclude?: readonly string[];
+    readonly esbuildOptions?: { readonly define?: Record<string, string> };
+  };
+}
+
 export interface GraphVitePlugin {
   readonly name: string;
   readonly enforce: "pre";
-  config(): Promise<void>;
+  config(): Promise<GraphViteConfigPatch>;
   /** Dev-only: serves the `/__glean` devtools overlay. */
   configureServer(server: GraphDevServer): void;
   transform(

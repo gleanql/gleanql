@@ -1,0 +1,13 @@
+# The app's GraphQL schema — the single input the @gleanql/vite plugin needs.
+type Query {
+  notes: [Note!]!
+}
+
+type Note {
+  id: ID!
+  text: String!
+}
+
+type Mutation {
+  addNote(id: ID!, text: String!): Note!
+}

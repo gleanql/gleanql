@@ -105,6 +105,8 @@ jobs:
             typecheck: pnpm typecheck
           - dir: examples/rwsdk-todo
             typecheck: pnpm exec tsc --noEmit
+          - dir: examples/starter
+            typecheck: pnpm exec tsc --noEmit
           - dir: site
             typecheck: pnpm exec tsc --noEmit
     steps:

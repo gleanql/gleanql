@@ -20,9 +20,9 @@ export function ProductPage({ params }: { params: { handle: string } }) {
       <ProductHero product={product} />
       <BuyBox product={product} />
       <p style={{ color: "#666" }}>server-rendered views: {product.views} (static)</p>
-      <RefreshViews handle={params.handle} initialViews={product.views} />
-      <RenameTitle handle={params.handle} id={product.id} initialTitle={product.title} />
-      <LivePrice handle={params.handle} initialAmount={product.priceRange.minVariantPrice.amount} />
+      <RefreshViews handle={params.handle} />
+      <RenameTitle handle={params.handle} id={product.id} />
+      <LivePrice handle={params.handle} />
     </main>
   );
 }

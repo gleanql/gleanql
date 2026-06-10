@@ -10,9 +10,9 @@ import { useGlean, useSubscription } from "@gleanql/client/client";
  * record the page hydrated, so it updates in place; fine-grained reactivity re-renders
  * only the components that read it.
  */
-export function LivePrice({ handle, initialAmount }: { handle: string; initialAmount: string }) {
+export function LivePrice({ handle }: { handle: string }) {
   const glean = useGlean();
-  const amount = glean?.product({ handle })?.priceRange?.minVariantPrice?.amount ?? initialAmount;
+  const amount = glean?.product({ handle })?.priceRange?.minVariantPrice?.amount;
 
   const { error } = useSubscription(
     (s, vars) => s.productChanged(vars).priceRange.minVariantPrice.amount,

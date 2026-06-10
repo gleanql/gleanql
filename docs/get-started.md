@@ -94,4 +94,5 @@ Each knob is documented on the [@gleanql/vite page](vite.md); none are required 
 
 - [Using GleanQL](usage.md) — the task tour: mutations, optimistic UI, pagination, subscriptions, errors.
 - [vs Relay & gqty](comparison.md) — why "declare once, resolved at build time" is a different animal.
+- `examples/starter` — the minimal app (one schema, one route, one island); copy it to start a project.
 - `examples/rwsdk-real`, `examples/rwsdk-todo`, `examples/remix-real` — three bootable apps exercising everything above.

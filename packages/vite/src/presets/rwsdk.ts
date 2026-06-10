@@ -16,6 +16,15 @@ export function rwsdk(): FrameworkPreset {
     name: "rwsdk",
     appDir: "src",
     requestScope: "rwsdk",
+    // The generated package MUST stay in the dep optimizer here (excluding it
+    // un-wires RedwoodSDK's vendored React — two React copies, contexts/hooks
+    // silently mismatch, islands render null). Staleness is solved by keying
+    // the optimizer's cache on the generated operations instead: the define
+    // value changes when any operation changes, which changes the optimizer
+    // hash and forces a re-prebundle — same ops, warm cache.
+    viteConfigPatch: (operations) => ({
+      optimizeDeps: { esbuildOptions: { define: { __GLEANQL_OPS_DIGEST__: JSON.stringify(opsDigest(operations)) } } },
+    }),
     emitClientGlue: (ctx) => {
       const caps = { mutation: !!ctx.schemaModel.mutationType, subscription: !!ctx.schemaModel.subscriptionType };
       const opts = {
@@ -34,4 +43,16 @@ export function rwsdk(): FrameworkPreset {
       "./server": { types: "./generated/server.d.ts", default: "./generated/server.js" },
     }),
   };
+}
+
+/** A stable fingerprint of the compiled operations (names + hashes), for the optimizer cache key. */
+function opsDigest(operations: Record<string, { hash?: string }>): string {
+  const parts = Object.entries(operations)
+    .map(([name, op]) => `${name}:${op.hash ?? ""}`)
+    .sort()
+    .join("|");
+  // djb2 — tiny, stable, no crypto needed: this only has to CHANGE when ops change.
+  let h = 5381;
+  for (let i = 0; i < parts.length; i++) h = ((h << 5) + h + parts.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
 }

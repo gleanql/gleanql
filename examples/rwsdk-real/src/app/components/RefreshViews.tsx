@@ -7,13 +7,13 @@ import { useGlean, refresh } from "@gleanql/client/client";
  * hydrated client graph (and re-renders this component when the cache changes).
  * The compiler sees this island read `product.views` (it opens its own root via
  * `useGlean()`), folds that into the page operation, and records it in the read-map
- * — so `refresh()` refetches exactly `product.views`. On the server / first client
- * render it falls back to the value passed down from the RSC parent.
+ * — so `refresh()` refetches exactly `product.views`. It renders warm everywhere:
+ * the SSR pass resolves the request's graph, and hydration binds the same data.
  */
-export function RefreshViews({ handle, initialViews }: { handle: string; initialViews: number }) {
+export function RefreshViews({ handle }: { handle: string }) {
   const glean = useGlean();
   const product = glean?.product({ handle });
-  const views = product?.views ?? initialViews;
+  const views = product?.views;
   const [pending, setPending] = useState(false);
 
   // refresh() refetches only what THIS component reads (its compiled read-map —
