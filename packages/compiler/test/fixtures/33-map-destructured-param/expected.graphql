@@ -1,0 +1,15 @@
+query ListRoute($handle: String!) {
+  collection(handle: $handle) {
+    __typename
+    id
+    products(first: 10) {
+      __typename
+      nodes {
+        __typename
+        id
+        title
+        handle
+      }
+    }
+  }
+}

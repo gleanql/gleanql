@@ -1,0 +1,26 @@
+query Route($query: String!) {
+  search(query: $query) {
+    __typename
+    nodes {
+      __typename
+      ... on Product {
+        __typename
+        id
+        title
+        featuredImage {
+          __typename
+          url
+        }
+      }
+      ... on Collection {
+        __typename
+        id
+        title
+        image {
+          __typename
+          url
+        }
+      }
+    }
+  }
+}

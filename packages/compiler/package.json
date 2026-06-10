@@ -1,0 +1,44 @@
+{
+  "name": "@gleanql/compiler",
+  "version": "0.1.0",
+  "description": "Glean's static analyzer: compiles accessor-style reads in route files to GraphQL operations",
+  "license": "MIT",
+  "author": "Alexander Liljengard",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gleanql/gleanql.git",
+    "directory": "packages/compiler"
+  },
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "publishConfig": {
+    "main": "./dist/index.mjs",
+    "types": "./dist/index.d.mts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsdown src/index.ts --format esm --dts.eager"
+  },
+  "dependencies": {
+    "@gleanql/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "typescript": "^6.0.3"
+  },
+  "optionalDependencies": {
+    "@typescript/native-preview": "7.0.0-dev.20260605.1"
+  }
+}

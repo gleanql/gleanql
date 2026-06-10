@@ -1,0 +1,45 @@
+{
+  "name": "@gleanql/client",
+  "version": "0.1.0",
+  "description": "Glean's runtime: normalized cache, fine-grained reactivity, mutations, subscriptions and React hooks",
+  "license": "MIT",
+  "author": "Alexander Liljengard",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gleanql/gleanql.git",
+    "directory": "packages/client"
+  },
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "publishConfig": {
+    "main": "./dist/index.mjs",
+    "types": "./dist/index.d.mts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsdown src/index.ts --format esm --dts.eager"
+  },
+  "dependencies": {
+    "@gleanql/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.14",
+    "react": "19.2.6"
+  }
+}

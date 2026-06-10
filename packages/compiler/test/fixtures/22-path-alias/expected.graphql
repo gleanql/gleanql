@@ -1,0 +1,15 @@
+query ProductRoute($handle: String!) {
+  product(handle: $handle) {
+    __typename
+    id
+    title
+    priceRange {
+      __typename
+      minVariantPrice {
+        __typename
+        amount
+        currencyCode
+      }
+    }
+  }
+}

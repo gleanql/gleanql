@@ -1,0 +1,1 @@
+{"ProductsList":["Product.id"],"Row":["Product.title","Product.priceRange.minVariantPrice.amount"]}

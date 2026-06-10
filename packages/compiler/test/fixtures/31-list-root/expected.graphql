@@ -1,0 +1,7 @@
+query AllProducts {
+  products {
+    __typename
+    id
+    title
+  }
+}

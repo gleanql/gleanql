@@ -1,0 +1,9 @@
+{
+  "ProductRoute": [
+    "Product.title"
+  ],
+  "PriceTag": [
+    "Product.priceRange.minVariantPrice.amount",
+    "Product.priceRange.minVariantPrice.currencyCode"
+  ]
+}

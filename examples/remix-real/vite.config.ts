@@ -1,0 +1,22 @@
+import path from "node:path";
+import { reactRouter } from "@react-router/dev/vite";
+import { glean } from "@gleanql/vite";
+import { defineConfig } from "vite";
+
+const appDir = path.resolve(import.meta.dirname, "app");
+
+export default defineConfig({
+  // `~/…` → app/… so the generated `@gleanql/client` glue (which imports the app's
+  // universal scope module via `requestScope`) resolves from node_modules too.
+  resolve: { alias: [{ find: /^~\//, replacement: appDir + "/" }] },
+  // The generated glue lives in node_modules but imports the app's `~/graph-scope`;
+  // bundle @gleanql/client through Vite (don't externalize) so that alias is applied.
+  ssr: { noExternal: ["@gleanql/client"] },
+  plugins: [
+    // Provisions @gleanql/client + codegens the schema/operations/glue into
+    // node_modules. The react-router preset emits isomorphic (non-RSC) client glue
+    // that shares the app's scope — no RSC server component, no route transform.
+    glean({ schema: "../storefront-fixture/schema.graphql", framework: "react-router", endpoint: "/graphql" }),
+    reactRouter(),
+  ],
+});

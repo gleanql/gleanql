@@ -1,0 +1,31 @@
+{
+  "name": "@example/remix-real",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "react-router dev",
+    "build": "react-router build",
+    "start": "react-router-serve ./build/server/index.js",
+    "typecheck": "react-router typegen && tsc"
+  },
+  "dependencies": {
+    "@gleanql/client": "workspace:*",
+    "@gleanql/storefront-fixture": "workspace:*",
+    "@react-router/node": "^7.9.0",
+    "@react-router/serve": "^7.9.0",
+    "graphql": "^16.9.0",
+    "isbot": "^5.1.0",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "react-router": "^7.9.0"
+  },
+  "devDependencies": {
+    "@gleanql/vite": "workspace:*",
+    "@react-router/dev": "^7.9.0",
+    "@types/node": "^22.10.0",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "typescript": "^5.6.3",
+    "vite": "~7.3.2"
+  }
+}

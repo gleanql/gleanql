@@ -1,0 +1,10 @@
+{
+  "ProductCard": [
+    "Product.title",
+    "Product.featuredImage.url"
+  ],
+  "BuyBox": [
+    "Product.priceRange.minVariantPrice.amount",
+    "Product.priceRange.minVariantPrice.currencyCode"
+  ]
+}

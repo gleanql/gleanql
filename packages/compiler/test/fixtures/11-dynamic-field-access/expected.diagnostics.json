@@ -1,0 +1,1 @@
+[{"code": "dynamic-field-access", "message": "Cannot compile dynamic graph field access product[fieldName].\nGraph fields must be accessed with static property names."}]

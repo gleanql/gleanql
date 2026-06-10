@@ -1,0 +1,189 @@
+:root {
+  --bg: #ffffff;
+  --fg: #1f2328;
+  --muted: #59636e;
+  --line: #d8dee4;
+  --accent: #6d4aff;
+  --accent-soft: #efeaff;
+  --sidebar-bg: #141a2a;
+  --sidebar-fg: #c9d2e3;
+  --sidebar-muted: #7c89a4;
+  --code-bg: #0d1117;
+  --code-fg: #e6edf3;
+  --note-bg: #eef4ff;
+  --note-line: #3b82f6;
+  --warn-bg: #fff7e6;
+  --warn-line: #d9a000;
+  --ok-bg: #ecfdf3;
+  --ok-line: #12a150;
+  --radius: 10px;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  font-family: var(--sans);
+  color: var(--fg);
+  background: var(--bg);
+  line-height: 1.6;
+  font-size: 16px;
+}
+
+/* ---- Sidebar ---- */
+.sidebar {
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: 264px;
+  background: var(--sidebar-bg);
+  color: var(--sidebar-fg);
+  padding: 26px 18px 40px;
+  overflow-y: auto;
+}
+.brand {
+  font-weight: 700;
+  font-size: 19px;
+  letter-spacing: -0.02em;
+  color: #fff;
+  margin-bottom: 4px;
+}
+.brand span { color: var(--accent); }
+.brand-sub { color: var(--sidebar-muted); font-size: 12.5px; margin-bottom: 24px; }
+.sidebar nav { display: block; }
+.sidebar .group {
+  color: var(--sidebar-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  margin: 20px 0 7px;
+  font-weight: 600;
+}
+.sidebar a {
+  display: block;
+  color: var(--sidebar-fg);
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: 7px;
+  font-size: 14.5px;
+}
+.sidebar a:hover { background: rgba(255,255,255,0.06); color: #fff; }
+.sidebar a.active { background: var(--accent); color: #fff; font-weight: 500; }
+
+/* ---- Main ---- */
+main {
+  margin-left: 264px;
+  padding: 56px 56px 120px;
+}
+article { max-width: 860px; }
+
+h1 { font-size: 34px; letter-spacing: -0.025em; margin: 0 0 6px; line-height: 1.15; }
+h2 { font-size: 23px; letter-spacing: -0.02em; margin: 44px 0 12px; padding-top: 8px; border-top: 1px solid var(--line); }
+h2:first-of-type { border-top: none; }
+h3 { font-size: 17.5px; margin: 28px 0 8px; }
+.lede { font-size: 18.5px; color: var(--muted); margin: 0 0 8px; }
+
+p, li { color: #353b41; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+code {
+  font-family: var(--mono);
+  font-size: 0.88em;
+  background: #f1f2f4;
+  padding: 0.12em 0.4em;
+  border-radius: 5px;
+  color: #3a3f45;
+}
+pre {
+  background: var(--code-bg);
+  color: var(--code-fg);
+  padding: 16px 18px;
+  border-radius: var(--radius);
+  /* Long lines wrap at whitespace (indentation preserved) instead of being cut
+     off or forcing a horizontal scroll; a too-long unbreakable token still scrolls. */
+  white-space: pre-wrap;
+  overflow-wrap: normal;
+  overflow-x: auto;
+  font-size: 13.5px;
+  line-height: 1.55;
+  margin: 14px 0;
+  tab-size: 2;
+}
+/* Wrapped continuation lines get a hanging indent so they read as continuations. */
+pre code { background: none; padding: 0; color: inherit; font-size: inherit; display: block; }
+pre .c { color: #8b949e; }   /* comment */
+pre .k { color: #ff7b72; }   /* keyword */
+pre .s { color: #a5d6ff; }   /* string */
+pre .t { color: #79c0ff; }   /* type / name */
+pre .f { color: #d2a8ff; }   /* function */
+
+.note, .warn, .ok {
+  border-left: 4px solid var(--note-line);
+  background: var(--note-bg);
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin: 18px 0;
+  font-size: 15px;
+}
+.warn { border-color: var(--warn-line); background: var(--warn-bg); }
+.ok { border-color: var(--ok-line); background: var(--ok-bg); }
+.note strong, .warn strong, .ok strong { display: inline; }
+
+table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14.5px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.05em; }
+td code { white-space: nowrap; }
+
+.pill {
+  display: inline-block;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 999px;
+  vertical-align: middle;
+}
+.pill.gray { background: #eceef1; color: #59636e; }
+.pill.green { background: var(--ok-bg); color: var(--ok-line); }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; margin: 18px 0; }
+.card { border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; }
+.card h3 { margin: 0 0 4px; font-size: 15.5px; }
+.card p { margin: 0; font-size: 14px; color: var(--muted); }
+.card a { font-size: 14px; }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+.two-col .col-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+
+.flow {
+  font-family: var(--mono);
+  font-size: 13px;
+  background: #f7f8fa;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+  white-space: pre;
+  overflow-x: auto;
+  color: #353b41;
+  line-height: 1.5;
+}
+
+.golden-case { border: 1px solid var(--line); border-radius: var(--radius); margin: 20px 0; overflow: hidden; }
+.golden-case > .gc-head { background: #f7f8fa; padding: 10px 16px; border-bottom: 1px solid var(--line); font-weight: 600; }
+.golden-case > .gc-head .pill { margin-left: 8px; font-weight: 600; }
+.golden-case .gc-body { padding: 4px 16px 14px; }
+.golden-case .gc-label { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 14px 0 0; }
+
+footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13.5px; }
+.kbd { font-family: var(--mono); background: #eceef1; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; font-size: 12.5px; }
+
+@media (max-width: 900px) {
+  .sidebar { position: static; width: auto; }
+  main { margin-left: 0; padding: 28px 22px 80px; }
+  .two-col { grid-template-columns: 1fr; }
+}

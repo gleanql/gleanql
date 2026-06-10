@@ -1,0 +1,30 @@
+# The todo schema — the single source of truth the @gleanql/vite plugin compiles from.
+# Reads become page operations; useMutation selectors become mutation operations.
+
+type Query {
+  # A top-level LIST root: the page opens `todos` directly and the client island reads
+  # it live (`glean.todos().map(...)`), no object wrapper. After a membership change
+  # (add/remove/clear) the island `refresh()`es, which re-seeds the root array and
+  # re-renders the readers.
+  todos: [Todo!]!
+}
+
+type Todo {
+  id: ID!
+  title: String!
+  completed: Boolean!
+  createdAt: String!
+}
+
+type Mutation {
+  # The id is generated client-side and passed in, so an optimistic add can render the
+  # final row immediately (no temp id to reconcile when the server confirms).
+  addTodo(id: ID!, title: String!): Todo!
+  # Returns the updated entity so it normalizes into the cache and the row updates in
+  # place (no list re-fetch needed for a toggle).
+  toggleTodo(id: ID!): Todo
+  removeTodo(id: ID!): ID
+  setTitle(id: ID!, title: String!): Todo
+  setAllCompleted(completed: Boolean!): Int!
+  clearCompleted: Int!
+}

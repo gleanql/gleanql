@@ -1,0 +1,7 @@
+mutation EditTitle_setProductTitle($id: ID!, $title: String!) {
+  setProductTitle(id: $id, title: $title) {
+    __typename
+    id
+    title
+  }
+}

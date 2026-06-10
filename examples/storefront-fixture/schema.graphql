@@ -1,0 +1,64 @@
+# The storefront schema — the single source of truth shared by every example.
+# Point the @gleanql/vite plugin at this file:  glean({ schema: "../storefront-fixture/schema.graphql" })
+# @gleanql/codegen turns it into the SchemaModel + branded types + the `glean` accessor.
+type Query {
+  product(handle: String!): Product
+  collection(handle: String!): Collection
+}
+
+# Mutations compile the same way reads do: a `useMutation((m, vars) => …)` selector
+# roots here, its args lift to operation variables, and the returned entity
+# normalizes into the cache so every read of it updates in place.
+type Mutation {
+  setProductTitle(id: ID!, title: String!): Product
+}
+
+# Subscriptions compile the same way: a `useSubscription((s, vars) => …)` selector
+# roots here, and each pushed Product normalizes into the cache so live values update
+# in place. The example streams it over Server-Sent Events.
+type Subscription {
+  productChanged(handle: String!): Product
+}
+
+type Collection {
+  id: ID!
+  handle: String!
+  title: String!
+  products(first: Int!, after: String): ProductConnection!
+}
+
+# A connection. Glean bakes in NO pagination convention: a component reads whatever
+# `pageInfo`/cursor fields it wants and the compiler includes exactly those.
+type ProductConnection {
+  nodes: [Product!]!
+  pageInfo: PageInfo!
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  endCursor: String
+}
+
+type Product {
+  id: ID!
+  handle: String!
+  title: String!
+  descriptionHtml: String!
+  featuredImage: Image
+  priceRange: ProductPriceRange!
+  views: Int!
+}
+
+type Image {
+  url: String!
+  altText: String
+}
+
+type ProductPriceRange {
+  minVariantPrice: MoneyV2!
+}
+
+type MoneyV2 {
+  amount: String!
+  currencyCode: String!
+}

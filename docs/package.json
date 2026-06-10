@@ -1,0 +1,32 @@
+{
+  "name": "@gleanql/docs",
+  "version": "0.0.0",
+  "description": "The Glean docs site — a RedwoodSDK app (React Server Components on Cloudflare workerd)",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite dev",
+    "preview": "vite preview",
+    "release": "vite build && wrangler deploy",
+    "generate": "wrangler types --include-runtime false",
+    "types": "tsc"
+  },
+  "dependencies": {
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "react-server-dom-webpack": "19.2.6",
+    "rwsdk": "1.2.11"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "1.33.2",
+    "@cloudflare/workers-types": "4.20260426.1",
+    "@types/node": "~25.6.0",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "typescript": "6.0.3",
+    "vite": "~7.3.2",
+    "wrangler": "4.85.0"
+  }
+}

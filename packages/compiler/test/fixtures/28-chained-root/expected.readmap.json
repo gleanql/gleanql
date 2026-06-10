@@ -1,0 +1,1 @@
+{ "ChainedRoute": ["Product.title", "Product.priceRange.minVariantPrice.amount"] }

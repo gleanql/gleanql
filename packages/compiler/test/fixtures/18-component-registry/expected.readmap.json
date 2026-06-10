@@ -1,0 +1,1 @@
+{"ProductCard":["Product.title","Product.featuredImage.url"],"ProductRow":["Product.title","Product.priceRange.minVariantPrice.amount"],"ProductHero":["Product.title","Product.featuredImage.url"]}

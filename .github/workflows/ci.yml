@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel superseded runs on the same ref (a new push to a PR stops the old one).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# Run JS actions on Node 24 (GitHub force-migrates off the deprecated Node 20 runtime
+# on 2026-06-16); opting in early keeps the run warning-free and forward-compatible.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  test:
+    name: typecheck + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # pnpm before setup-node, so setup-node's pnpm cache can find it. The version
+      # comes from package.json `packageManager` (pnpm@10.2.1).
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # Build scripts for esbuild/sharp/workerd are pre-approved via
+      # package.json `pnpm.onlyBuiltDependencies`, so install is non-interactive.
+      - run: pnpm install --frozen-lockfile
+
+      # tsc over the one root tsconfig (the build-time worker examples are excluded there).
+      - run: pnpm typecheck
+
+      # vitest resolves @gleanql/* to source (package `exports` point at ./src), so no
+      # build step is needed before the suite runs.
+      - run: pnpm test
+
+      # The publishable dists (tsdown) — catches packages whose source typechecks
+      # but whose build output is broken.
+      - run: pnpm build
+
+  standalone:
+    name: standalone consumption e2e (pack → install → generate)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Tarballs are packed from dist (publishConfig applied) — build first.
+      - run: pnpm build
+
+      # Pack every @gleanql/* package, install into a fresh temp app OUTSIDE the
+      # workspace, and run the generate pipeline there twice (pristine + re-run).
+      - run: node scripts/pack-e2e.mjs
+
+  examples:
+    name: app ${{ matrix.dir }} (build + typecheck)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The rwsdk apps typecheck with plain tsc (wrangler's
+          # worker-configuration.d.ts is committed); remix-real needs its
+          # react-router typegen first. The docs site is an rwsdk app too.
+          - dir: examples/rwsdk-real
+            typecheck: pnpm exec tsc --noEmit
+          - dir: examples/remix-real
+            typecheck: pnpm typecheck
+          - dir: examples/rwsdk-todo
+            typecheck: pnpm exec tsc --noEmit
+          - dir: docs
+            typecheck: pnpm exec tsc --noEmit
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # The app's vite build provisions the generated @gleanql glue (runtime +
+      # .d.ts) into its node_modules — required before the example can typecheck.
+      # Build must come AFTER install: install prunes the provisioned packages.
+      - run: pnpm build
+        working-directory: ${{ matrix.dir }}
+
+      - run: ${{ matrix.typecheck }}
+        working-directory: ${{ matrix.dir }}

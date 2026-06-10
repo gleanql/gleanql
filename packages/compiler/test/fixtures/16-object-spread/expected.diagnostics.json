@@ -1,0 +1,1 @@
+[{"code": "graph-value-spread", "message": "Cannot spread graph-backed value product.\nGraph values must be passed, read, or explicitly converted."}]

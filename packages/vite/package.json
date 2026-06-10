@@ -1,0 +1,39 @@
+{
+  "name": "@gleanql/vite",
+  "version": "0.1.0",
+  "description": "Glean's Vite plugin: provisions the runtime, runs codegen and compiles route reads to GraphQL operations",
+  "license": "MIT",
+  "author": "Alexander Liljengard",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gleanql/gleanql.git",
+    "directory": "packages/vite"
+  },
+  "type": "module",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown src/index.ts --format esm --dts.eager",
+    "prepare": "tsdown src/index.ts --format esm --dts.eager"
+  },
+  "dependencies": {
+    "esbuild": "^0.25.0",
+    "graphql": "^16.9.0",
+    "typescript": "^6.0.3"
+  },
+  "devDependencies": {
+    "@gleanql/codegen": "workspace:*",
+    "@gleanql/compiler": "workspace:*",
+    "@gleanql/core": "workspace:*",
+    "tsdown": "^0.22.0"
+  }
+}

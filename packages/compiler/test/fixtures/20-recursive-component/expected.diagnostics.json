@@ -1,0 +1,1 @@
+[{"code": "recursive-component", "message": "Cannot statically expand recursive graph component <Tree />.\nProvide an explicit recursion depth or wrap the recursive subtree in a lazy boundary."}]

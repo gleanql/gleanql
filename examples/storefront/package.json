@@ -1,0 +1,12 @@
+{
+  "name": "@example/storefront",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@gleanql/client": "workspace:*",
+    "@gleanql/codegen": "workspace:*",
+    "@gleanql/compiler": "workspace:*",
+    "@gleanql/core": "workspace:*"
+  }
+}

@@ -1,0 +1,1 @@
+[{"code": "unsupported-list-flow", "message": "Cannot statically analyze the list callback renderers[params.kind].\nUse an inline arrow/function, a reference to a named function, or a destructured\nelement parameter — the callback's element reads must be statically visible."}]

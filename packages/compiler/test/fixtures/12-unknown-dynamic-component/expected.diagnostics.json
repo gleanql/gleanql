@@ -1,0 +1,1 @@
+[{"code": "unresolved-dynamic-component", "message": "Cannot statically resolve graph-backed JSX component <Component />.\n\nThe component receives graph-backed props:\n  product: Product\n\nUse a static conditional, a graph.components(...) registry,\nor provide explicit candidates."}]

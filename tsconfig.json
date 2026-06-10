@@ -1,0 +1,31 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"],
+    "jsx": "preserve",
+    "paths": {
+      "@gleanql/core": ["./packages/core/src/index.ts"],
+      "@gleanql/compiler": ["./packages/compiler/src/index.ts"],
+      "@gleanql/client": ["./packages/client/src/index.ts"],
+      "@gleanql/codegen": ["./packages/codegen/src/index.ts"],
+      "@gleanql/vite": ["./packages/vite/src/index.ts"],
+      "~/graph": ["./examples/storefront/graph/graph.ts"],
+      "~/graph/schema": ["./examples/storefront/graph/schema.ts"]
+    }
+  },
+  "include": [
+    "packages/core/src",
+    "packages/core/test",
+    "packages/compiler/src",
+    "packages/compiler/test",
+    "packages/client/src",
+    "packages/client/test",
+    "packages/codegen/src",
+    "packages/codegen/test",
+    "packages/vite/src",
+    "packages/vite/test",
+    "examples"
+  ],
+  "exclude": ["**/node_modules/**", "**/dist/**", "**/fixtures/**", "examples/rwsdk-real", "examples/remix-real", "examples/rwsdk-todo"]
+}

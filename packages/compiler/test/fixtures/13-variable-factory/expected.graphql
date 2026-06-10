@@ -1,0 +1,7 @@
+query ProductRoute($product_handle: String!) {
+  product(handle: $product_handle) {
+    __typename
+    id
+    title
+  }
+}

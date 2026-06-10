@@ -1,0 +1,26 @@
+{
+  "name": "glean-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.2.1",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json",
+    "build": "pnpm --filter \"./packages/*\" build",
+    "example": "vitest run examples",
+    "docs": "pnpm --filter @gleanql/docs dev"
+  },
+  "license": "MIT",
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "sharp", "workerd"]
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "graphql": "^16.9.0",
+    "tsdown": "^0.22.0",
+    "typescript": "^6.0.3",
+    "vitest": "^2.1.8"
+  }
+}

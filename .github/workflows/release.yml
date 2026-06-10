@@ -1,0 +1,47 @@
+name: Release (npm publish)
+
+# Manually triggered: publishes every @gleanql/* package at the version in its
+# package.json. Requires the NPM_TOKEN repository secret (an npm automation
+# token with publish rights to the gleanql org). pnpm rewrites workspace:*
+# dependency ranges to the real versions at publish time.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "npm dist-tag"
+        required: true
+        default: "latest"
+        type: choice
+        options: [latest, next, alpha]
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  publish:
+    name: verify + publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: "https://registry.npmjs.org"
+
+      - run: pnpm install --frozen-lockfile
+
+      # The full gate before anything leaves the building.
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+
+      - run: pnpm -r --filter "./packages/*" publish --access public --tag ${{ inputs.tag }} --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

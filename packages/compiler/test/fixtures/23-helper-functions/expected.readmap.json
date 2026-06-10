@@ -1,0 +1,9 @@
+{
+  "summary": [
+    "Product.title",
+    "Product.descriptionHtml"
+  ],
+  "describeImage": [
+    "Product.featuredImage.url"
+  ]
+}

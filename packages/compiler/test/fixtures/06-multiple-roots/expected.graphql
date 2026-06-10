@@ -1,0 +1,12 @@
+query Route($handle: String!, $id: ID!) {
+  product(handle: $handle) {
+    __typename
+    id
+    title
+  }
+  cart(id: $id) {
+    __typename
+    id
+    totalQuantity
+  }
+}

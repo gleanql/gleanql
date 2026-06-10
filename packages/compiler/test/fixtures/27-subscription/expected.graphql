@@ -1,0 +1,7 @@
+subscription LiveTitle_productChanged($handle: String!) {
+  productChanged(handle: $handle) {
+    __typename
+    id
+    title
+  }
+}

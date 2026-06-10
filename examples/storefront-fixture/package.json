@@ -1,0 +1,16 @@
+{
+  "name": "@gleanql/storefront-fixture",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema.graphql": "./schema.graphql"
+  },
+  "dependencies": {
+    "graphql": "^16.14.1"
+  },
+  "devDependencies": {
+    "@gleanql/client": "workspace:*"
+  }
+}
