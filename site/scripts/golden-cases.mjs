@@ -58,6 +58,9 @@ order: 13
 
 The compiler's behavior catalog, generated directly from \`packages/compiler/test/fixtures/\` — every case below is a real golden fixture: \`input.tsx\` plus the expected operation, variables factory, read map and diagnostics, asserted byte-for-byte through BOTH type-checker engines and validated against the schema with graphql-js.
 
+> [!NOTE]
+> The fixtures import from a \`~/graph\` test alias — the analyzer recognizes the accessor **by binding, not by module path**, so the harness keeps it framework-neutral. In an app you import from \`@gleanql/client\` / \`@gleanql/client/schema\`, as shown in [Get started](get-started.md).
+
 ${sections.join("\n\n")}
 
 ---

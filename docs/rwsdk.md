@@ -48,7 +48,7 @@ const product = graph.product({ handle: params.handle });
 product.title;  product.featuredImage?.url;  product.priceRange.minVariantPrice.amount;
 ```
 
-If a module-level `import { glean } from "~/graph"` is preferred over reading `ctx`, back the integration with a `GraphScope` and wrap rendering in `integration.runInScope(requestInfo, render)`.
+If you prefer a module-level import over reading `ctx` — an app-owned module (say `~/graph`) re-exporting a scoped accessor — back the integration with a `GraphScope` and wrap rendering in `integration.runInScope(requestInfo, render)`.
 
 ## Serialize & hydrate
 

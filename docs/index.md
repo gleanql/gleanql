@@ -16,8 +16,8 @@ in your app code.
 Field access *is* the data requirement:
 
 ```tsx
-import { glean } from "~/graph";
-import type { Product } from "~/graph/schema";
+import { glean } from "@gleanql/client";
+import type { Product } from "@gleanql/client/schema";
 
 export default function ProductRoute({ params }) {
   const product = glean.product({ handle: params.handle });
