@@ -1,4 +1,4 @@
-# Glean · React Router 7 (framework mode)
+# GleanQL · React Router 7 (framework mode)
 
 A real, bootable **React Router 7** app on the same data layer as
 [`examples/rwsdk-real`](../rwsdk-real) — proving the framework binding is pluggable,

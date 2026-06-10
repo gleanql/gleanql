@@ -1,6 +1,6 @@
 # @gleanql/vite
 
-The build plugin for [Glean](https://github.com/gleanql/gleanql) — GraphQL
+The build plugin for [GleanQL](https://github.com/gleanql/gleanql) — GraphQL
 without writing GraphQL. This is the only build wiring an app needs:
 
 ```ts
@@ -35,7 +35,7 @@ reads), and the persisted-operation manifest. In dev it also serves the
 
 ## Docs
 
-Full documentation lives in the [Glean repo](https://github.com/gleanql/gleanql)
+Full documentation lives in the [GleanQL repo](https://github.com/gleanql/gleanql)
 — run `pnpm docs` there, or start with the Get Started guide.
 
 MIT

@@ -2,7 +2,7 @@
   // Schema reference for wrangler configuration
   "$schema": "node_modules/wrangler/config-schema.json",
 
-  "name": "glean-docs",
+  "name": "gleanql-docs",
   "main": "src/worker.tsx",
 
   "compatibility_date": "2025-08-21",

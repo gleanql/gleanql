@@ -76,7 +76,7 @@ export function MarkdownPage({ slug }: { slug: string }) {
   if (!page) return <DocsLayout active={slug}>Not found.</DocsLayout>;
   return (
     <DocsLayout active={page.slug}>
-      <title>{`${page.title} · glean`}</title>
+      <title>{`${page.title} · gleanql`}</title>
       <div dangerouslySetInnerHTML={{ __html: renderMarkdown(page.body) }} />
     </DocsLayout>
   );

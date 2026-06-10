@@ -4,7 +4,7 @@ group: Guide
 order: 1
 ---
 
-# Glean — TypeScript-Native GraphQL Query Compiler
+# GleanQL — TypeScript-Native GraphQL Query Compiler
 
 A framework-agnostic data system that uses GraphQL *internally* but never exposes GraphQL documents, fragments, or selector blocks in application code. Components look like ordinary React/TypeScript; the compiler infers the operation from normal field reads and prop flow.
 
@@ -75,7 +75,7 @@ Head to [Get started](get-started.md) — install two packages, point the plugin
 > [!NOTE]
 > **Three real, bootable examples.** `examples/rwsdk-real` is a genuine RedwoodSDK app (React 19 RSC on workerd) demoing persisted mode, registered operations, live subscriptions and the event channel; `examples/rwsdk-todo` is TodoMVC on a SQLite Durable Object with optimistic membership; `examples/remix-real` is the same data layer on React Router 7 (isomorphic SSR — not RSC), proving the framework binding is pluggable. None commit any graph glue.
 
-Working on Glean itself? `pnpm install && pnpm test` runs the full suite (~400 tests: golden fixtures through two type-checker engines, runtime, adapters, codegen, the build plugin); `pnpm typecheck` covers every package against one root tsconfig.
+Working on GleanQL itself? `pnpm install && pnpm test` runs the full suite (~400 tests: golden fixtures through two type-checker engines, runtime, adapters, codegen, the build plugin); `pnpm typecheck` covers every package against one root tsconfig.
 
 ## How it fits together
 
@@ -102,8 +102,8 @@ Working on Glean itself? `pnpm install && pnpm test` runs the full suite (~400 t
   └──────────────────────────┘
 ```
 
-To build with it, head to [Using Glean](usage.md) — a task-oriented tour (read, mutate, paginate, subscribe, optimistic UI). To see how this compares to the alternatives, read [vs Relay & gqty](comparison.md). For the internals, continue to [Architecture & pipeline](architecture.md) for the worked example, or jump to a page on the left.
+To build with it, head to [Using GleanQL](usage.md) — a task-oriented tour (read, mutate, paginate, subscribe, optimistic UI). To see how this compares to the alternatives, read [vs Relay & gqty](comparison.md). For the internals, continue to [Architecture & pipeline](architecture.md) for the worked example, or jump to a page on the left.
 
 ---
 
-Glean — TypeScript-Native GraphQL Query Compiler — ~400 tests, type-clean. Generated operations are validated against the real schema with graphql-js.
+GleanQL — TypeScript-Native GraphQL Query Compiler — ~400 tests, type-clean. Generated operations are validated against the real schema with graphql-js.

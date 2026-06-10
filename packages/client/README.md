@@ -1,6 +1,6 @@
 # @gleanql/client
 
-The runtime for [Glean](https://github.com/gleanql/gleanql) — GraphQL without
+The runtime for [GleanQL](https://github.com/gleanql/gleanql) — GraphQL without
 writing GraphQL. Install this in your app; the [`@gleanql/vite`](https://github.com/gleanql/gleanql/tree/main/packages/vite)
 plugin generates the schema-specific pieces (the typed `glean` accessor,
 compiled operations, framework glue) into it at build time.
@@ -33,7 +33,7 @@ export function ProductPage({ params }: { params: { handle: string } }) {
 
 ## Docs
 
-Full documentation lives in the [Glean repo](https://github.com/gleanql/gleanql)
+Full documentation lives in the [GleanQL repo](https://github.com/gleanql/gleanql)
 — run `pnpm docs` there, or start with the Get Started guide.
 
 MIT

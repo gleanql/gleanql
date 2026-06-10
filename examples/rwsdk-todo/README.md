@@ -1,6 +1,6 @@
-# Glean · Todo (RedwoodSDK)
+# GleanQL · Todo (RedwoodSDK)
 
-A real [RedwoodSDK](https://rwsdk.com) app on Cloudflare Workers, with **Glean** as the
+A real [RedwoodSDK](https://rwsdk.com) app on Cloudflare Workers, with **GleanQL** as the
 data layer. A working TodoMVC: add / toggle / delete / clear, filters, and persistence
 — no hand-written GraphQL queries anywhere.
 
@@ -10,14 +10,14 @@ pnpm --filter @example/rwsdk-todo dev
 
 ## What it shows
 
-It uses the RedwoodSDK stack to its fullest, and Glean for every read and write:
+It uses the RedwoodSDK stack to its fullest, and GleanQL for every read and write:
 
 - **Persistence — a SQLite Durable Object.** The data lives in `rwsdk/db`'s
   `SqliteDurableObject`, queried with Kysely (`src/db`). It survives reloads and
   redeploys; the migration runs lazily inside the DO on first access.
 - **GraphQL over the DB.** A tiny graphql-js executor (`src/graphql/executor.ts`)
-  resolves straight out of Kysely. This is the only thing behind Glean's adapter.
-- **Glean for the UI.** `@gleanql/vite` compiles `schema.graphql` into the typed `glean`
+  resolves straight out of Kysely. This is the only thing behind GleanQL's adapter.
+- **GleanQL for the UI.** `@gleanql/vite` compiles `schema.graphql` into the typed `glean`
   accessor + operations:
   - the route (`TodoPage`, RSC) opens `glean.board()` — that's all the data wiring a
     page needs; the read is preloaded and hydrated;
@@ -32,9 +32,9 @@ It uses the RedwoodSDK stack to its fullest, and Glean for every read and write:
 ## Layout
 
 ```
-schema.graphql              the Glean schema (board → todos, the mutations)
+schema.graphql              the GleanQL schema (board → todos, the mutations)
 src/db/                     the SQLite Durable Object + migrations + Kysely client
-src/graphql/executor.ts     graphql-js resolvers over the DB (Glean's adapter)
+src/graphql/executor.ts     graphql-js resolvers over the DB (GleanQL's adapter)
 src/worker.tsx              defineApp: the / route + /graphql endpoint + the DO export
 src/app/pages/TodoPage.tsx  the RSC route (opens `glean.board()`)
 src/app/components/TodoApp.tsx  the interactive island (useGlean + useMutation)

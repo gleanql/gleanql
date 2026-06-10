@@ -1,10 +1,10 @@
 ---
-title: Using Glean
+title: Using GleanQL
 group: Guide
 order: 3
 ---
 
-# Using Glean
+# Using GleanQL
 
 A task-oriented tour: install it, read data, write data, paginate, subscribe, and do optimistic UI — all without writing a single GraphQL document. The rule throughout: **a field access is a data requirement**. You read fields like normal object properties; the compiler turns those reads into one operation per route.
 

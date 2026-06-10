@@ -1,6 +1,6 @@
 # @gleanql/core
 
-The operation foundation for [Glean](https://github.com/gleanql/gleanql) —
+The operation foundation for [GleanQL](https://github.com/gleanql/gleanql) —
 GraphQL without writing GraphQL. This package owns everything between "a set
 of field reads" and "a GraphQL document":
 
@@ -22,6 +22,6 @@ and [`@gleanql/vite`](https://github.com/gleanql/gleanql/tree/main/packages/vite
 
 ## Docs
 
-Full documentation lives in the [Glean repo](https://github.com/gleanql/gleanql).
+Full documentation lives in the [GleanQL repo](https://github.com/gleanql/gleanql).
 
 MIT

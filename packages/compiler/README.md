@@ -1,6 +1,6 @@
 # @gleanql/compiler
 
-The static analyzer for [Glean](https://github.com/gleanql/gleanql) — GraphQL
+The static analyzer for [GleanQL](https://github.com/gleanql/gleanql) — GraphQL
 without writing GraphQL. It reads your React components with a real TypeScript
 program and turns their field reads into compiled GraphQL operations:
 
@@ -23,6 +23,6 @@ plugin drives it.
 ## Docs
 
 Full documentation (including the golden-case behavior catalog) lives in the
-[Glean repo](https://github.com/gleanql/gleanql).
+[GleanQL repo](https://github.com/gleanql/gleanql).
 
 MIT

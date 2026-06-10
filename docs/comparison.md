@@ -4,9 +4,9 @@ group: Guide
 order: 4
 ---
 
-# Glean vs Relay vs gqty
+# GleanQL vs Relay vs gqty
 
-The three tools answer the same question — *how does a React component get exactly the GraphQL data it reads?* — from three different directions. Glean's position: gqty's developer experience with Relay's runtime characteristics.
+The three tools answer the same question — *how does a React component get exactly the GraphQL data it reads?* — from three different directions. GleanQL's position: gqty's developer experience with Relay's runtime characteristics.
 
 ## The axis that actually matters
 
@@ -14,14 +14,14 @@ The three tools answer the same question — *how does a React component get exa
 
 **gqty** deletes the second copy: field access *is* the data requirement, captured by a runtime proxy. Maximum DX, paid for at runtime — the query is discovered *while rendering*, so first renders suspend against a proxy, requests can waterfall, and there is no static document to persist, allowlist, or analyze.
 
-**Glean** takes gqty's contract — plain components, field access is the requirement, zero GraphQL in app code — and moves the discovery to *build time*. The compiler statically analyzes routes, components, prop flow, and islands, and emits the same kind of artifact Relay's compiler does: a merged, deduplicated, hashed, persisted-able operation per route.
+**GleanQL** takes gqty's contract — plain components, field access is the requirement, zero GraphQL in app code — and moves the discovery to *build time*. The compiler statically analyzes routes, components, prop flow, and islands, and emits the same kind of artifact Relay's compiler does: a merged, deduplicated, hashed, persisted-able operation per route.
 
 > [!NOTE]
-> **One sentence:** if Relay is "declare twice, optimal at runtime" and gqty is "declare once, resolved at runtime", Glean is "declare once, resolved at build time".
+> **One sentence:** if Relay is "declare twice, optimal at runtime" and gqty is "declare once, resolved at runtime", GleanQL is "declare once, resolved at build time".
 
 ## Feature matrix
 
-|  | Glean | Relay | gqty |
+|  | GleanQL | Relay | gqty |
 | --- | --- | --- | --- |
 | GraphQL in app code | none — inferred from field reads | fragments + queries (GraphQL tagged templates) | none — inferred from field reads |
 | When the operation is known | **build time** (static document) | **build time** (static document) | runtime (proxy capture, per render) |
@@ -40,7 +40,7 @@ The three tools answer the same question — *how does a React component get exa
 
 ## What "compiled prop flow" replaces fragments with
 
-Relay's fragments exist so a child component can own its data requirement and any parent can compose it. Glean gets the same composition by *following the props*: the compiler resolves imported components, binds graph-valued props into their bodies, and folds their reads into the route operation — through `.map` callbacks (inline, destructured, or a named function reference), intermediate bindings, helper functions, conditional component choice, registries, and islands that open their own roots. The per-component **read-map** keeps the attribution fragments would have given you: each component's field paths are recorded, so `refresh()` can refetch exactly one component's data.
+Relay's fragments exist so a child component can own its data requirement and any parent can compose it. GleanQL gets the same composition by *following the props*: the compiler resolves imported components, binds graph-valued props into their bodies, and folds their reads into the route operation — through `.map` callbacks (inline, destructured, or a named function reference), intermediate bindings, helper functions, conditional component choice, registries, and islands that open their own roots. The per-component **read-map** keeps the attribution fragments would have given you: each component's field paths are recorded, so `refresh()` can refetch exactly one component's data.
 
 > [!WARNING]
 > **Honest limit:** a fragment is a *guarantee*; static analysis is a *best effort with a tripwire*. Code the analyzer can't follow (a dynamically selected callback, a component picked from a non-registry map) doesn't silently under-fetch — it fails the build with a diagnostic (`unsupported-list-flow`, `unresolved-dynamic-component`, …) and asks for an analyzable form. Relay never needs the tripwire; gqty never needs the analysis.
@@ -51,7 +51,7 @@ Relay's fragments exist so a child component can own its data requirement and an
 
 **Choose gqty** when you want zero-GraphQL DX and your app is client-heavy with tolerance for runtime query discovery — or you need patterns static analysis fundamentally can't follow.
 
-**Choose Glean** when you want plain TypeScript components *and* static operations: server-rendered React (RSC or SSR) where the route's data should be one compiled, hashed, allowlisted request — with fine-grained reactivity, optimistic writes, and live subscriptions on top, none of it visible in app code.
+**Choose GleanQL** when you want plain TypeScript components *and* static operations: server-rendered React (RSC or SSR) where the route's data should be one compiled, hashed, allowlisted request — with fine-grained reactivity, optimistic writes, and live subscriptions on top, none of it visible in app code.
 
 ## Receipts
 

@@ -1,6 +1,6 @@
-# Glean
+# GleanQL
 
-**GraphQL without writing GraphQL.** You write plain React components — Glean's
+**GraphQL without writing GraphQL.** You write plain React components — GleanQL's
 compiler reads them at build time and figures out the queries for you.
 
 ```tsx
@@ -13,7 +13,7 @@ function BuyBox({ product }: { product: Product }) {
 ```
 
 That's the whole data layer. No queries, no fragments, no `useQuery` wrappers.
-Glean compiles those field reads into **one GraphQL operation per route**, and
+GleanQL compiles those field reads into **one GraphQL operation per route**, and
 gives you a normalized cache, optimistic mutations, live subscriptions, and
 persisted operations on top.
 
@@ -26,7 +26,7 @@ GraphQL clients make you choose:
 - **gqty** lets you skip the queries, but it discovers them *at runtime* — so
   you get proxy magic, request waterfalls, and nothing to persist.
 
-Glean takes the third path: **declare once, resolve at build time.** You get
+GleanQL takes the third path: **declare once, resolve at build time.** You get
 gqty's developer experience with Relay's runtime characteristics. The longer
 version (with an honest feature matrix) is in the docs: `pnpm docs` →
 **/comparison**.
@@ -85,7 +85,7 @@ Server Components) and **React Router 7** (isomorphic SSR) today.
 | [`@gleanql/compiler`](packages/compiler) | The static analyzer that turns components into operations |
 | [`@gleanql/codegen`](packages/codegen) | Schema → typed accessor + branded types |
 
-## Working on Glean
+## Working on GleanQL
 
 ```
 pnpm install

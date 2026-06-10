@@ -1,7 +1,7 @@
-# Real RedwoodSDK app driven by Glean
+# Real RedwoodSDK app driven by GleanQL
 
 A genuine [RedwoodSDK](https://rwsdk.com) worker (React 19 RSC on Cloudflare /
-workerd) using the monorepo's Glean data system. Ordinary server components
+workerd) using the monorepo's GleanQL data system. Ordinary server components
 read `graph.product({ handle }).title` etc.; the compiled operation runs against
 an in-memory GraphQL server (graphql-js) through the **urql adapter**, seeds the
 cache, and the components render — no GraphQL in app code.

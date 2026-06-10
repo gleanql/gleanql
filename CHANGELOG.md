@@ -2,7 +2,7 @@
 
 ## 0.1.0 (unreleased)
 
-The first public cut of Glean — a TypeScript-native GraphQL query compiler:
+The first public cut of GleanQL — a TypeScript-native GraphQL query compiler:
 plain components in, compiled/persisted operations + a normalized reactive
 cache out. Highlights, by package:
 

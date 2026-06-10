@@ -847,84 +847,84 @@ export default [
   },
   {
     "href": "/usage",
-    "title": "Using Glean",
+    "title": "Using GleanQL",
     "group": "Guide"
   },
   {
     "href": "/usage#1-install-wire-up",
-    "title": "Using Glean",
+    "title": "Using GleanQL",
     "group": "Guide",
     "heading": "1 · Install & wire up"
   },
   {
     "href": "/usage#2-read-data",
-    "title": "Using Glean",
+    "title": "Using GleanQL",
     "group": "Guide",
     "heading": "2 · Read data"
   },
   {
     "href": "/usage#3-server-components-vs-islands",
-    "title": "Using Glean",
+    "title": "Using GleanQL",
     "group": "Guide",
     "heading": "3 · Server components vs. islands"
   },
   {
     "href": "/usage#4-lists-list-roots",
-    "title": "Using Glean",
+    "title": "Using GleanQL",
     "group": "Guide",
     "heading": "4 · Lists & list roots"
   },
   {
     "href": "/usage#5-write-data-mutations",
-    "title": "Using Glean",
+    "title": "Using GleanQL",
     "group": "Guide",
     "heading": "5 · Write data (mutations)"
   },
   {
     "href": "/usage#6-optimistic-ui",
-    "title": "Using Glean",
+    "title": "Using GleanQL",
     "group": "Guide",
     "heading": "6 · Optimistic UI"
   },
   {
     "href": "/usage#7-paginate",
-    "title": "Using Glean",
+    "title": "Using GleanQL",
     "group": "Guide",
     "heading": "7 · Paginate"
   },
   {
     "href": "/usage#8-live-data-subscriptions",
-    "title": "Using Glean",
+    "title": "Using GleanQL",
     "group": "Guide",
     "heading": "8 · Live data (subscriptions)"
   },
   {
     "href": "/usage#9-refetch",
-    "title": "Using Glean",
+    "title": "Using GleanQL",
     "group": "Guide",
     "heading": "9 · Refetch"
   },
   {
     "href": "/usage#10-lock-down-the-wire-persisted-operations",
-    "title": "Using Glean",
+    "title": "Using GleanQL",
     "group": "Guide",
     "heading": "10 · Lock down the wire (persisted operations)"
   },
   {
     "href": "/usage#11-hand-built-operations-dynamic-shapes",
-    "title": "Using Glean",
+    "title": "Using GleanQL",
     "group": "Guide",
     "heading": "11 · Hand-built operations (dynamic shapes)"
   },
   {
     "href": "/usage#12-handle-errors",
-    "title": "Using Glean",
+    "title": "Using GleanQL",
     "group": "Guide",
     "heading": "12 · Handle errors"
   },
   {
     "href": "/usage#where-to-go-next",
-    "title": "Using Glean",
+    "title": "Using GleanQL",
     "group": "Guide",
     "heading": "Where to go next"
   },

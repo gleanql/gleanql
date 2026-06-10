@@ -20,7 +20,7 @@ export function DocsLayout({ active, children }: { active: string; children: Rea
         <MenuButton />
         <a className="brand" href="/">
           <span className="mark">✳</span>
-          glean
+          gleanql
           <span className="tag">docs</span>
         </a>
         <div className="topbar-spacer" />

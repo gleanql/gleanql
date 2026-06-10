@@ -18,7 +18,7 @@ pnpm add -D @gleanql/vite
 ```
 
 > [!NOTE]
-> **Pre-release note:** until the first npm release lands, run Glean from the monorepo (clone + `pnpm install`; the examples show the full setup).
+> **Pre-release note:** until the first npm release lands, run GleanQL from the monorepo (clone + `pnpm install`; the examples show the full setup).
 
 ## 2 · Point the plugin at your schema
 
@@ -90,6 +90,6 @@ Each knob is documented on the [@gleanql/vite page](vite.md); none are required 
 
 ## Where next
 
-- [Using Glean](usage.md) — the task tour: mutations, optimistic UI, pagination, subscriptions, errors.
+- [Using GleanQL](usage.md) — the task tour: mutations, optimistic UI, pagination, subscriptions, errors.
 - [vs Relay & gqty](comparison.md) — why "declare once, resolved at build time" is a different animal.
 - `examples/rwsdk-real`, `examples/rwsdk-todo`, `examples/remix-real` — three bootable apps exercising everything above.

@@ -1,4 +1,4 @@
-# Glean documentation
+# GleanQL documentation
 
 These markdown files **are** the docs — start at [index.md](index.md), or read
 them rendered at [gleanql.com](https://gleanql.com).

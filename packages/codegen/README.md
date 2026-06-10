@@ -1,6 +1,6 @@
 # @gleanql/codegen
 
-The schema generator for [Glean](https://github.com/gleanql/gleanql) — GraphQL
+The schema generator for [GleanQL](https://github.com/gleanql/gleanql) — GraphQL
 without writing GraphQL. From a GraphQL schema (SDL or introspection) it
 generates:
 
@@ -16,6 +16,6 @@ plugin runs it on every build from your `schema.graphql`.
 
 ## Docs
 
-Full documentation lives in the [Glean repo](https://github.com/gleanql/gleanql).
+Full documentation lives in the [GleanQL repo](https://github.com/gleanql/gleanql).
 
 MIT
