@@ -55,7 +55,10 @@ userland types look like schema types.
 
 A server component reads through the isomorphic `glean` accessor, as above. A
 `"use client"` **island** reads through the `useGlean()` hook. Its reads still
-fold into the owning route's operation at compile time, so it hydrates warm:
+fold into the owning route's operation at compile time — and the island renders
+warm *everywhere*: on the SSR pass (the request's graph rides in through the
+hydration boundary), on the hydration render, and live thereafter. No fallback
+flash, no server-prop passthrough:
 
 ```tsx
 "use client";

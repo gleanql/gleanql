@@ -67,7 +67,7 @@ describe("genClientJs", () => {
 
   it("types the generated client entrypoint", () => {
     const dts = genClientDts();
-    expect(dts).toContain("export declare function GraphHydrator(props: { payload: GraphHydrationPayload }): null;");
+    expect(dts).toContain('export declare function GraphHydrator(props: { payload: GraphHydrationPayload; children?: import("react").ReactNode }): import("react").ReactNode;');
     expect(dts).toContain("export declare function useGlean(component?: string): Graph | undefined;");
     expect(dts).toContain("export declare function refresh(target?: string | { component: string }): Promise<void>;");
     expect(dts).toContain("export declare function appendToRoot(rootField: string, entity: unknown, options?: { prepend?: boolean; at?: number }): void;");

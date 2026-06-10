@@ -1,4 +1,4 @@
-import { jsx, jsxs, Fragment } from "react/jsx-runtime";
+import { jsx } from "react/jsx-runtime";
 import type { ComponentType, ReactNode } from "react";
 import { serializeGraph, type ActiveRequestGraph, type GraphHydrationPayload } from "./index.js";
 
@@ -16,25 +16,29 @@ export interface GraphServerOptions {
   /** Resolve this request's active graph (null on non-graph routes). */
   readonly getActive: () => ActiveRequestGraph | null;
   /** The client hydrator component (from the generated client entrypoint). */
-  readonly GraphHydrator: ComponentType<{ payload: GraphHydrationPayload }>;
+  readonly GraphHydrator: ComponentType<{ payload: GraphHydrationPayload; children?: ReactNode }>;
 }
 
 export interface GraphServer {
-  GraphHydrate(props?: { clientSafeContext?: readonly string[] }): ReactNode;
+  GraphHydrate(props?: { clientSafeContext?: readonly string[]; children?: ReactNode }): ReactNode;
   withGraphHydration<P extends object>(Page: ComponentType<P>): ComponentType<P>;
 }
 
 export function createGraphServer(opts: GraphServerOptions): GraphServer {
-  function GraphHydrate(props?: { clientSafeContext?: readonly string[] }): ReactNode {
+  // The page renders INSIDE the hydrator: in the SSR pass the hydrator provides
+  // this request's graph through React context (request-isolated by construction),
+  // so `useGlean()` islands server-render warm. The payload prop still rides the
+  // flight stream for the browser's hydration.
+  function GraphHydrate(props?: { clientSafeContext?: readonly string[]; children?: ReactNode }): ReactNode {
     const active = opts.getActive();
-    if (!active) return null;
+    if (!active) return props?.children ?? null;
     const payload = serializeGraph(active, { clientSafeContext: props?.clientSafeContext ?? [] });
-    return jsx(opts.GraphHydrator, { payload });
+    return jsx(opts.GraphHydrator, { payload, children: props?.children });
   }
 
   function withGraphHydration<P extends object>(Page: ComponentType<P>): ComponentType<P> {
     return function GraphHydratedPage(props: P) {
-      return jsxs(Fragment, { children: [jsx(GraphHydrate, {}), jsx(Page, props)] });
+      return jsx(GraphHydrate, { children: jsx(Page, props) });
     };
   }
 

@@ -162,7 +162,7 @@ export function genClientDts(caps: HookCaps = NO_HOOKS, operationTypes?: string)
   return generatedDts({
     imports: [...CLIENT_DTS_IMPORTS, ...hookDtsImports(caps)],
     body: [
-      `export declare function GraphHydrator(props: { payload: GraphHydrationPayload }): null;`,
+      `export declare function GraphHydrator(props: { payload: GraphHydrationPayload; children?: import("react").ReactNode }): import("react").ReactNode;`,
       `export declare function useGlean(component?: string): Graph | undefined;`,
       ...clientDtsBody(caps, operationTypes),
     ],
@@ -241,7 +241,7 @@ export function genServerDts(): string {
   return generatedDts({
     imports: [`import type { ComponentType } from "react";`],
     body: [
-      `export declare function GraphHydrate(props?: { clientSafeContext?: readonly string[] }): unknown;`,
+      `export declare function GraphHydrate(props?: { clientSafeContext?: readonly string[]; children?: import("react").ReactNode }): unknown;`,
       `export declare function withGraphHydration<P>(Page: ComponentType<P>): ComponentType<P>;`,
     ],
   });

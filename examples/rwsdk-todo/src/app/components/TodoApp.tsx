@@ -21,7 +21,7 @@ type AddTodoResult = { addTodo: { __typename: "Todo"; id: string; title: string;
  *  - `clearCompleted` splices after the server confirms (bulk delete, no rollback needed);
  *    `toggleAll` `refresh()`es — a bulk change that returns a count, not entities.
  */
-export function TodoApp({ initialCount }: { initialCount: number }) {
+export function TodoApp() {
   const glean = useGlean();
   const [filter, setFilter] = useState<Filter>("all");
   const [draft, setDraft] = useState("");
@@ -46,18 +46,12 @@ export function TodoApp({ initialCount }: { initialCount: number }) {
   const [setAll] = useMutation((m, vars: { completed: boolean }) => m.setAllCompleted(vars));
   const [clear] = useMutation((m) => m.clearCompleted());
 
-  // The live list, read straight off the hydrated graph — the `todos` list root folds
-  // `todos { id title completed }` into the page operation. Undefined only for the
-  // brief moment before hydration (then `useGlean` re-renders as the page pointer
-  // lands and roots resolve).
+  // The live list, read straight off the graph — the `todos` list root folds
+  // `todos { id title completed }` into the page operation. The island reads warm on
+  // the SSR pass (the request's graph) AND on the hydration render (the payload is
+  // absorbed before siblings render), so this guard never shows on a preloaded route.
   const todos = glean?.todos();
-  if (!todos) {
-    return (
-      <div className="app">
-        <div className="empty">loading {initialCount} todo{initialCount === 1 ? "" : "s"}…</div>
-      </div>
-    );
-  }
+  if (!todos) return null;
 
   // The id is generated client-side so the optimistic row is the final row. The optimistic
   // splice + rollback are declared on the mutations above — the handlers just fire them.

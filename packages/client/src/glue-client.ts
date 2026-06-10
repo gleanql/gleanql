@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { createContext, createElement, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import type { ReactNode } from "react";
 import {
   GraphRuntime,
   GraphScope,
@@ -46,6 +47,18 @@ function useLatest<T>(value: T): { readonly current: T } {
   return ref;
 }
 
+/** An active graph plus the page's root pointers (how a server-side graph carries its roots). */
+type SsrActive = ActiveGraph & { readonly roots?: Record<string, FieldValue> };
+
+/**
+ * SSR-pass carrier: `<GraphHydrator>` provides this request's graph to the island
+ * children it wraps, so `useGlean()` server-renders warm. React context is the one
+ * channel that is request-isolated by construction during streaming SSR — module
+ * state is shared across concurrent requests, and the framework's request scope
+ * (e.g. `rwsdk/worker`) is gated to the RSC environment.
+ */
+const SsrActiveContext = createContext<SsrActive | null>(null);
+
 /**
  * The client-side runtime glue, shared by both hydration models. The generated
  * `@gleanql/client/client` entrypoint is a thin shim that calls this with its baked
@@ -65,6 +78,13 @@ export interface GraphClientOptions {
   readonly endpoint: string;
   /** Shared scope (isomorphic hosts). Omit for an RSC-private singleton. */
   readonly scope?: GraphScope;
+  /**
+   * Optional server-side resolver for this request's active graph. Most hosts don't
+   * need it: RSC islands get the request graph through `<GraphHydrator>`'s context,
+   * and isomorphic hosts through the shared scope. This is the escape hatch for a
+   * custom host whose SSR pass can reach its request scope directly.
+   */
+  readonly serverActive?: () => SsrActive | undefined;
   /** Optional LRU cap on the long-lived client cache (it accumulates across navigations). */
   readonly maxCacheRecords?: number;
   /** Send operations by sha-256 hash (persisted-operation mode) instead of by document. */
@@ -197,7 +217,7 @@ export interface GraphClient {
   /** Fold a hydration payload into the client runtime (host-driven; isomorphic SSR). */
   hydrate(payload: GraphHydrationPayload | undefined): void;
   /** Client island that folds its payload prop in as it crosses the RSC boundary. */
-  GraphHydrator(props: { payload: GraphHydrationPayload | undefined }): null;
+  GraphHydrator(props: { payload: GraphHydrationPayload | undefined; children?: ReactNode }): ReactNode;
 }
 
 /**
@@ -426,7 +446,10 @@ export function createGraphClient(opts: GraphClientOptions): GraphClient {
     try {
       return scope.current();
     } catch {
-      return undefined;
+      // RSC SSR pass: the private scope is never set server-side. Fall through to
+      // the host-provided per-request resolver (the same graph the route preloaded)
+      // so islands server-render warm instead of flashing their fallback.
+      return typeof window === "undefined" ? opts.serverActive?.() : undefined;
     }
   };
 
@@ -462,12 +485,27 @@ export function createGraphClient(opts: GraphClientOptions): GraphClient {
     if (a) absorb(a, payload, true);
   }
 
-  function GraphHydrator({ payload }: { payload: GraphHydrationPayload | undefined }): null {
+  function GraphHydrator({
+    payload,
+    children,
+  }: {
+    payload: GraphHydrationPayload | undefined;
+    children?: ReactNode;
+  }): ReactNode {
+    const isServer = typeof window === "undefined";
     const last = useRef<GraphHydrationPayload | null>(null);
-    const a = ensure();
-    // Render-phase: fold the snapshot in so sibling islands read warm this pass
-    // (write-only — the notify is deferred to the effect).
-    if (a && payload && payload !== last.current) absorbHydrationPayload(a.runtime, payload);
+    const ssr = useRef<{ payload: GraphHydrationPayload; active: SsrActive } | null>(null);
+    const a = isServer ? undefined : ensure();
+    // Browser, render-phase: fold the snapshot in so the island children read warm
+    // this pass (write-only — the notify is deferred to the effect). The FIRST
+    // payload also installs the page pointer render-phase: the hydrator renders
+    // before its children, so their hydration render binds the same data the server
+    // rendered — symmetric with the SSR pass, no mismatch. (Later navigations go
+    // through the effect, which bumps the epoch and notifies.)
+    if (a && payload && payload !== last.current) {
+      absorbHydrationPayload(a.runtime, payload);
+      currentPage ??= pagePointer(payload);
+    }
     useEffect(() => {
       if (a && payload && payload !== last.current) {
         last.current = payload;
@@ -475,7 +513,22 @@ export function createGraphClient(opts: GraphClientOptions): GraphClient {
         a.runtime.notify();
       }
     });
-    return null;
+    if (isServer && payload) {
+      // SSR pass: there is no browser runtime and the private scope is unset.
+      // Rebuild this request's graph from the payload (the exact snapshot the
+      // browser will hydrate) and provide it through context — island children
+      // server-render warm, and the carrier is request-isolated by construction.
+      if (ssr.current?.payload !== payload) {
+        const runtime = GraphRuntime.hydrate(payload.snapshot, {
+          keyOf: (typename, obj) => opts.schema.identityOf(typename, obj),
+          fetchMissing: async (misses) => misses.map((m) => ({ ref: m.ref, fieldKey: m.fieldKey, value: undefined })),
+        });
+        const graph = bindGraph({ schema: opts.schema, getRuntime: () => runtime, roots: payload.roots });
+        ssr.current = { payload, active: { runtime, graph, roots: payload.roots } };
+      }
+      return createElement(SsrActiveContext.Provider, { value: ssr.current.active }, children);
+    }
+    return children ?? null;
   }
 
   // Masking: warned pairs are remembered per component+pair (one warning, not a
@@ -491,13 +544,18 @@ export function createGraphClient(opts: GraphClientOptions): GraphClient {
   };
 
   function useGlean(component?: string): BoundGraph | undefined {
-    const a = ensure();
+    // SSR pass: the wrapping <GraphHydrator> provides this request's graph. In the
+    // browser (and for scope-carrying hosts) `ensure()` wins and the context is null.
+    const ssrActive = useContext(SsrActiveContext);
+    const a = ensure() ?? ssrActive ?? undefined;
     // Re-render on a page-pointer change (hydration / navigation) so roots re-resolve.
-    // The epoch ALSO gates readiness: on the server there is no client runtime, so an
-    // island renders its pre-data fallback. `useSyncExternalStore` returns the server
-    // snapshot (0) during the hydration render too, so the first client render matches
-    // the server (still no binding) — no hydration mismatch — then re-renders with the
-    // live binding once the page pointer lands (epoch > 0).
+    // Readiness is symmetric across the SSR/hydration boundary: on the server, `a`
+    // is the request's preloaded graph (via `serverActive`) and carries its own
+    // roots — the island server-renders warm. At hydration, `<GraphHydrator>` has
+    // already absorbed the payload and set the page pointer render-phase (it renders
+    // before its sibling islands), so the first client render binds the same data
+    // the server rendered — no mismatch. With no preload/payload, both sides render
+    // the fallback. The epoch subscription drives re-renders after navigations.
     const epoch = useSyncExternalStore(subscribePage, () => pageEpoch, () => 0);
     // Fine-grained: a fresh read tracker for THIS render. Reads in the component body
     // record which records they touched, and the hook re-renders only when one of those
@@ -528,14 +586,20 @@ export function createGraphClient(opts: GraphClientOptions): GraphClient {
           }
         : undefined,
     );
-    if (!a || epoch === 0) return undefined;
+    const isServer = typeof window === "undefined";
+    if (!a) return undefined;
+    if (!isServer && epoch === 0 && !currentPage) return undefined; // no payload yet — pre-data fallback
+    void epoch; // subscription only; readiness is decided by `a` + the page pointer
     // Bind the graph with this render's tracker so every read attributes to it directly
     // — fiber-local, not an ambient global, so interleaved concurrent renders can't
     // cross-attribute. (The isomorphic accessor / server `a.graph` carry no tracker.)
+    // The page pointer is browser state; a server-side active graph (request scope /
+    // `serverActive`) carries its own roots, so SSR reads resolve against those.
+    const activeRoots = (a as { roots?: Record<string, FieldValue> }).roots;
     return bindGraph({
       schema: opts.schema,
       getRuntime: () => a.runtime,
-      roots: () => currentPage?.roots,
+      roots: () => currentPage?.roots ?? activeRoots,
       tracker,
     });
   }

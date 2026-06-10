@@ -10,14 +10,14 @@ import { TodoApp } from "@/app/components/TodoApp";
  */
 export function TodoPage() {
   // Open the `todos` list root: this makes TodoPage a discovered route and preloads +
-  // hydrates the list. The island reads `glean.todos()` directly off `useGlean()` (no
-  // server-prop passthrough needed) — on a page change it re-renders and re-resolves
-  // the root. We pass the server count so its pre-hydration placeholder isn't jarring.
-  const todos = glean.todos();
+  // hydrates the list. The island reads `glean.todos()` directly off `useGlean()` —
+  // it server-renders warm (the SSR pass resolves the request's graph) and hydrates
+  // against the same data, so there is no fallback flash and no server-prop passthrough.
+  glean.todos();
   return (
     <div className="wrap">
       <h1>todos</h1>
-      <TodoApp initialCount={todos.length} />
+      <TodoApp />
       <p className="muted" style={{ textAlign: "center", marginTop: "1rem" }}>
         Backed by a SQLite Durable Object · GraphQL · Glean compile-time reads
       </p>
