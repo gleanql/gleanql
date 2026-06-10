@@ -6,11 +6,11 @@ order: 6
 
 # Architecture & pipeline
 
-From `.tsx` source to a validated GraphQL operation, step by step — and why the responsibilities are split the way they are.
+This page walks from `.tsx` source to a validated GraphQL operation, step by step. It also explains why the responsibilities are split the way they are.
 
 ## Responsibility split
 
-The system owns everything *about* the data graph; an existing client owns the wire.
+The system owns everything *about* the data graph. An existing client owns the wire.
 
 | This system owns | A client/transport adapter owns |
 | --- | --- |
@@ -23,7 +23,7 @@ The system owns everything *about* the data graph; an existing client owns the w
 | `@gleanql/core` | Query IR, `q.*` builder, selection merger, GraphQL printer, schema model, operation artifact, devtools, fluent escape hatch. |
 | `@gleanql/compiler` | `GraphCompilerBackend` seam, a `typescript` backend, and the analyzer. |
 | `@gleanql/client` | Client adapter, normalized/path cache, normalizer, Suspense runtime, route seam, and the React glue factories (`createGraphClient`/`createGraphServer`) the generated entrypoints shim over (`react` peer, `>=18`). |
-| `@gleanql/vite` | The build plugin: generates the schema (`glean` accessor, types, operations) into `@gleanql/client`. Framework-specific decisions sit behind a `FrameworkPreset` seam; the core pipeline stays neutral. |
+| `@gleanql/vite` | The build plugin: generates the schema (`glean` accessor, types, operations) into `@gleanql/client`. Framework-specific decisions sit behind a `FrameworkPreset` seam. The core pipeline stays neutral. |
 
 ## The compile pipeline
 
@@ -43,7 +43,7 @@ The system owns everything *about* the data graph; an existing client owns the w
 
 ## Worked example
 
-Two components read different parts of the same `product`. Each contributes a partial selection; the merger combines them.
+Two components read different parts of the same `product`. Each contributes a partial selection. The merger combines them.
 
 **ProductHero reads**
 
@@ -84,7 +84,7 @@ query ProductRoute($handle: String!) {
 
 ## Compiler vs. runtime authority (hybrid)
 
-The compiler is authoritative for the *initial* operation; the runtime may fetch fields that were not statically reachable (lazy/dynamic paths). The mode is configurable:
+The compiler is authoritative for the *initial* operation. The runtime may fetch fields that were not statically reachable (lazy/dynamic paths). The mode is configurable:
 
 | Mode | Behavior |
 | --- | --- |
@@ -96,7 +96,7 @@ v1 implements `hybrid` and exposes `unexpectedMissingField: "allow" | "warn" | "
 
 ## The backend seam
 
-The analyzer walks the TypeScript AST for *structure* but routes every *type/symbol* question through `GraphCompilerBackend`. The default ships a real `ts.Program` + `TypeChecker`. Because the seam is the only contact point for type info, a Go-based engine (tsgo / `@typescript/native-preview`) plugs in without touching analysis logic — it already does, as an experimental `backend` option.
+The analyzer walks the TypeScript AST for *structure*. It routes every *type/symbol* question through `GraphCompilerBackend`. The default backend ships a real `ts.Program` + `TypeChecker`. The seam is the only contact point for type info, so a Go-based engine (tsgo / `@typescript/native-preview`) plugs in without touching analysis logic. It already does, as an experimental `backend` option.
 
 ```tsx
 interface GraphCompilerBackend {
@@ -108,7 +108,7 @@ interface GraphCompilerBackend {
 }
 ```
 
-The build creates **one** `ts.Program` over all files and analyzes each route against it (`analyzeFile` + a shared backend), instead of recreating a full program per route — O(routes × files) program builds collapse to one. Because all type/symbol queries still go through the seam, the engine stays swappable: the in-process `typescript` backend is the default, and an experimental Go-native `tsgo` backend (`@typescript/native-preview`) is selectable via the Vite plugin's `backend` option — same interface, much faster type-checking on large route sets, with a graceful fallback to `typescript` when the optional dep can't be resolved.
+The build creates **one** `ts.Program` over all files and analyzes each route against it (`analyzeFile` + a shared backend). It does not recreate a full program per route, so O(routes × files) program builds collapse to one. All type/symbol queries still go through the seam, which keeps the engine swappable. The in-process `typescript` backend is the default. An experimental Go-native `tsgo` backend (`@typescript/native-preview`) is selectable via the Vite plugin's `backend` option. It implements the same interface and type-checks much faster on large route sets. When the optional dep can't be resolved, the build falls back gracefully to `typescript`.
 
 ---
 

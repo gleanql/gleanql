@@ -22,7 +22,7 @@ pnpm add -D @gleanql/vite
 
 ## 2 · Point the plugin at your schema
 
-One plugin, one required option. Everything else — codegen, the compiler, the typed accessor, the persisted manifest — happens behind it on every build and dev start.
+You add one plugin with one required option. Everything else happens behind it on every build and dev start: codegen, the compiler, the typed accessor, and the persisted manifest.
 
 ```tsx
 // vite.config.ts (RedwoodSDK)
@@ -63,7 +63,7 @@ function BuyBox({ product }: { product: Product }) {
 }
 ```
 
-The compiler follows the reads — through props, helpers, `.map` callbacks, islands — and emits **one operation for the route**, a variables factory bound to your route params, and a per-component read map. Anything it can't follow is a *build error*, never a silent under-fetch.
+The compiler follows the reads through props, helpers, `.map` callbacks, and islands. It emits **one operation for the route**, a variables factory bound to your route params, and a per-component read map. Anything it can't follow is a *build error* — never a silent under-fetch.
 
 ## 4 · Run it
 
@@ -71,7 +71,9 @@ The compiler follows the reads — through props, helpers, `.map` callbacks, isl
 pnpm dev
 ```
 
-Open your route — the page renders server-side from one compiled operation and hydrates with the cache warm. Then open **`/__glean`**: every operation the build compiled, its document, persisted hash, size stats, and which component reads which field. That page is the complete picture of what your app can put on the wire.
+Open your route. The page renders server-side from one compiled operation and hydrates with the cache warm.
+
+Then open **`/__glean`**. It lists every operation the build compiled — the document, its persisted hash, size stats, and which component reads which field. That page is the complete picture of what your app can put on the wire.
 
 ## 5 · Turn the production knobs (when you want them)
 

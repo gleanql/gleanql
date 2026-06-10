@@ -318,6 +318,12 @@ export default [
     "heading": "Deliberately deferred"
   },
   {
+    "href": "/decisions#shipped-since-the-first-cut",
+    "title": "Design decisions",
+    "group": "Reference",
+    "heading": "Shipped since the first cut"
+  },
+  {
     "href": "/decisions#defer-stream-a-decision-not-yet-a-feature",
     "title": "Design decisions",
     "group": "Reference",

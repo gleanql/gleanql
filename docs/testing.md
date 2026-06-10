@@ -6,11 +6,10 @@ order: 4
 
 # Testing your app
 
-Components that read graph fields are still just components — the harness in
-`@gleanql/client/testing` lets you render them against a **real runtime seeded
-from plain JSON**. No GraphQL server, no compiled operations, no Vite plugin in
-the test process. The schema is baked in by the build, so a test states only
-what it's about: the data.
+Components that read graph fields are still plain components. The harness in
+`@gleanql/client/testing` renders them against a **real runtime seeded from
+plain JSON** — no GraphQL server in the test process. The schema is baked in
+by the build, so a test states only what it's about: the data.
 
 ```bash
 # vitest, jest, node:test — anything; the harness is renderer-agnostic

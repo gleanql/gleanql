@@ -6,11 +6,23 @@ order: 9
 
 # `@gleanql/core`
 
-The framework-agnostic foundation: the query IR, the `q.*` builder, the selection merger, the GraphQL printer, the schema model, the operation artifact, and devtools.
+This package is the framework-agnostic foundation. It provides:
+
+- the query IR
+- the `q.*` builder
+- the selection merger
+- the GraphQL printer
+- the schema model
+- the operation artifact
+- devtools
 
 ## Query IR
 
-The compiler never emits GraphQL strings directly. It produces this IR, which is merged and then printed. Keeping an IR between extraction and printing is what enables dedupe-by-canonical-path, identity injection, and directives without string surgery.
+The compiler never emits GraphQL strings directly. It produces this IR, which is merged and then printed. Keeping an IR between extraction and printing enables three things without string surgery:
+
+- dedupe by canonical path
+- identity injection
+- directives
 
 ```tsx
 interface OperationIR {
@@ -42,11 +54,11 @@ type ArgValue =
   | { kind: "object"; fields: [string, ArgValue][] };
 ```
 
-Variable references (`q.var`) are how arbitrary argument expressions get lifted into the generated variables factory; literals are what allow argument-level dedupe.
+Variable references (`q.var`) are how arbitrary argument expressions get lifted into the generated variables factory. Literals are what allow argument-level dedupe.
 
 ## The `q.*` builder
 
-The compiler emits calls to these helpers (and there's a human-authored escape hatch using the same surface). `q.select` takes a record keyed by *response key* (the alias if aliased, else the field name); each value carries the real field name.
+The compiler emits calls to these helpers. A human-authored escape hatch uses the same surface. `q.select` takes a record keyed by *response key* — the alias if aliased, else the field name. Each value carries the real field name.
 
 ```tsx
 q.operation({ kind, name, variables, selection })
@@ -59,7 +71,7 @@ q.var(name) · q.literal(v) · q.enumValue(v) · q.list([…]) · q.object(argMa
 
 ## The selection merger
 
-Given any number of selection-set contributions over the same type (one per component read, or per dynamic-component candidate), `mergeSelectionSets` produces one canonical set.
+`mergeSelectionSets` takes any number of selection-set contributions over the same type and produces one canonical set. A contribution comes from one component read, or from one dynamic-component candidate.
 
 ### 1 · Dedupe identity
 
@@ -83,7 +95,7 @@ product.featuredImage?.url; product.featuredImage?.altText;
 
 ### 2 · Argument conflicts → aliases
 
-Same field name, different args, both present ⇒ both get a generated alias `${name}_${suffix}` where the suffix is derived deterministically from the arguments.
+When the same field appears with different arguments, both occurrences get a generated alias. The alias is `${name}_${suffix}`, and the suffix is derived deterministically from the arguments.
 
 ```tsx
 collection.products({ first: 12 })   // products_first12: products(first: 12)
@@ -94,10 +106,10 @@ A field that appears only once keeps its bare name, even with arguments.
 
 ### 3 · Identity injection
 
-Every *non-root* object selection gets `__typename`; types that expose an `id` field also get `id` — even if no component read them.
+Every *non-root* object selection gets `__typename`. Types that expose an `id` field also get `id`. Both are injected even if no component read them.
 
 > [!WARNING]
-> **Consistent rule.** `__typename` is always injected for object selections — including pure-scalar leaf objects like `MoneyV2`. One uniform rule keeps generated documents predictable; see [Design decisions](decisions.md).
+> **Consistent rule.** `__typename` is always injected for object selections, including pure-scalar leaf objects like `MoneyV2`. One uniform rule keeps generated documents predictable; see [Design decisions](decisions.md).
 
 ### 4 · Deterministic order
 
@@ -108,16 +120,22 @@ mergeSelectionSets(sets, schema, { isRoot? })  // merge contributions on one typ
 mergeOperations(name, ops, schema)             // merge whole operations (root not given identity)
 ```
 
-> [!NOTE]
-> **Operation-level vs cache-level dedupe are separate.** The merger does *operation-level* dedupe (merge identical query paths into one document). *Cache-level* dedupe (normalize entities by `__typename + id`) happens in the runtime.
+Operation-level and cache-level dedupe are separate concerns. The merger does *operation-level* dedupe: it merges identical query paths into one document. *Cache-level* dedupe — normalizing entities by `__typename + id` — happens in the runtime.
 
 ## GraphQL printer
 
-The only place IR becomes a string. Deterministic two-space indentation; fields print in IR order (already canonicalized by the merger). `printOperation(op)`, plus `printArgs` / `printArgValue`.
+The printer is the only place IR becomes a string. It uses deterministic two-space indentation. Fields print in IR order, which the merger has already canonicalized. The entry points are `printOperation(op)`, plus `printArgs` / `printArgValue`.
 
 ## Schema model
 
-Just enough schema knowledge to resolve a field's type, know identity, distinguish leaf/object/union/list, and validate roots. Hand-authorable via `defineSchema(...)`; an introspection-driven generator can produce the same shape.
+The schema model carries just enough schema knowledge to:
+
+- resolve a field's type
+- know identity
+- distinguish leaf, object, union, and list types
+- validate roots
+
+You can hand-author a model via `defineSchema(...)`. An introspection-driven generator can produce the same shape.
 
 ```tsx
 schema.getField(typeName, fieldName)   // → { type, list?, nonNull?, args? }
@@ -131,7 +149,7 @@ schema.getRootField(name)
 
 ## Operation artifact
 
-A compiled operation bundles more than the document — this is what a framework adapter loads to drive a route.
+A compiled operation bundles more than the document. The artifact is what a framework adapter loads to drive a route.
 
 ```tsx
 interface OperationArtifact {
@@ -148,7 +166,7 @@ interface OperationArtifact {
 
 ## Devtools
 
-`renderReadMapTree(name, readMap)` prints the per-component read tree; `summarizeOperation(...)` flags large/expensive operations (field/root/connection counts + the largest contributing component).
+`renderReadMapTree(name, readMap)` prints the per-component read tree. `summarizeOperation(...)` flags large or expensive operations. It reports field, root, and connection counts, plus the largest contributing component.
 
 ```tsx
 ProductRoute query
@@ -162,7 +180,13 @@ ProductRoute query
 
 ## Human-authored escape hatch
 
-Normal app code relies on compiler extraction. For the rare hand-written operation, `buildQuery` offers a fluent, schema-free builder: scalar fields are read as properties, object fields are called with a selection callback, and the variables proxy yields `$var` references. Output is printed verbatim (no identity injection — the author controls the exact selection).
+Normal app code relies on compiler extraction. For the rare hand-written operation, `buildQuery` offers a fluent, schema-free builder:
+
+- scalar fields are read as properties
+- object fields are called with a selection callback
+- the variables proxy yields `$var` references
+
+Output is printed verbatim, with no identity injection. The author controls the exact selection.
 
 ```tsx
 buildQuery("ProductQuery", { handle: "String!" }, (root, $) => ({
@@ -175,7 +199,7 @@ buildQuery("ProductQuery", { handle: "String!" }, (root, $) => ({
 
 ## Directives
 
-The IR can express directives (`@include`/`@skip` and contextual ones) even though v1 exposes no public directive API. They survive merging and printing:
+The IR can express directives — `@include`/`@skip` and contextual ones — even though v1 exposes no public directive API. They survive merging and printing:
 
 ```tsx
 descriptionHtml @include(if: $expanded)

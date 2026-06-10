@@ -6,7 +6,7 @@ order: 11
 
 # `@gleanql/codegen`
 
-Schemas are not hand-authored. Point the generator at a GraphQL introspection result and it emits the three files the rest of the system consumes — the machine-generated equivalents of what you'd otherwise write by hand.
+Schemas are not hand-authored. Point the generator at a GraphQL introspection result. It emits the three files the rest of the system consumes — the machine-generated equivalents of what you'd otherwise write by hand.
 
 ## Inputs & outputs
 
@@ -31,7 +31,7 @@ const { schemaModel, types, graph } = generateSchemaPackage(
 
 ## Why branded types
 
-To app code these read as ordinary schema types; the compiler recognizes them via the `__typename` brand. Because nullability and lists are rendered exactly, TypeScript catches API drift before runtime:
+To app code these read as ordinary schema types. The compiler recognizes them via the `__typename` brand. Nullability and lists are rendered exactly, so TypeScript catches API drift before runtime:
 
 ```tsx
 export interface Product {
@@ -47,7 +47,11 @@ export interface Product {
 
 ## Loop closure
 
-The generator is decoupled from graphql-js — it just transforms the introspection JSON (structural types). The whole loop is verified end-to-end: a GraphQL schema → generated `SchemaModel` → the *real* compiler on `ProductRoute.tsx` → the byte-identical acceptance operation (`examples/storefront/codegen.test.ts`).
+The generator is decoupled from graphql-js. It transforms the introspection JSON, using structural types. The whole loop is verified end-to-end in `examples/storefront/codegen.test.ts`:
+
+- a GraphQL schema produces the generated `SchemaModel`
+- the *real* compiler runs on `ProductRoute.tsx` against that model
+- the output is the byte-identical acceptance operation
 
 ---
 

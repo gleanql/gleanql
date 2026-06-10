@@ -30,8 +30,8 @@ function BuyBox({ product }: { product: Product }) {
 }
 ```
 
-The compiler reads those property accesses across the whole route — following
-the value through JSX props into `BuyBox` — de-duplicates them, and emits one
+The compiler reads those property accesses across the whole route, following
+the value through JSX props into `BuyBox`. It de-duplicates them and emits one
 operation:
 
 ```graphql
@@ -59,17 +59,16 @@ The read side is half the story. Writes, live data, and re-rendering all keep
 the same contract — you express intent in plain TypeScript, the build does the
 GraphQL:
 
-- **Mutations** are compile-time selectors: `useMutation((m, vars) =>
-  m.cartLinesAdd(vars).cart.totalQuantity)` becomes a named operation, and its
-  result normalizes into the cache so every read of the mutated entity updates
-  in place.
-- **Subscriptions** compile the same way and stream over SSE or `graphql-ws`;
-  each pushed payload folds into the cache.
-- **Re-rendering is field-grained.** The normalized cache versions each
-  record, so a component re-renders only when a record *it actually read*
-  changes.
+- **Mutations** are compile-time selectors. `useMutation((m, vars) =>
+  m.cartLinesAdd(vars).cart.totalQuantity)` becomes a named operation. Its
+  result normalizes into the cache, so every read of the mutated entity
+  updates in place.
+- **Subscriptions** compile the same way and stream over SSE or `graphql-ws`.
+  Each pushed payload folds into the cache.
+- **Re-rendering is field-grained.** The cache versions each record, so a
+  component re-renders only when a record *it actually read* changes.
 - **The wire can be locked.** Every build emits a sha-256 allowlist of every
-  operation the app can send; flip `persisted: true` and only known hashes
+  operation the app can send. Flip `persisted: true` and only known hashes
   cross the network.
 
 The [task tour](usage.md) walks each of these with running code.
@@ -128,10 +127,11 @@ fixtures run through two type-checker engines.
 4. **[Architecture & pipeline](architecture.md)** — the worked example, stage
    by stage, for the internals.
 
-> [!NOTE]
-> **Three bootable examples** live in the repo: `examples/rwsdk-real` (a
-> RedwoodSDK storefront — islands, live SSE prices, persisted mode, a typed
-> registered operation), `examples/rwsdk-todo` (TodoMVC on a SQLite Durable
-> Object with optimistic membership), and `examples/remix-real` (the same data
-> layer on React Router 7 — isomorphic SSR, no RSC). None commit any generated
-> glue.
+Three bootable examples live in the repo, and none commit any generated glue:
+
+- `examples/rwsdk-real` — a RedwoodSDK storefront: islands, live SSE prices,
+  persisted mode, a typed registered operation, and the jsdom test harness.
+- `examples/rwsdk-todo` — TodoMVC on a SQLite Durable Object, with optimistic
+  membership.
+- `examples/remix-real` — the same data layer on React Router 7. Isomorphic
+  SSR, no RSC.

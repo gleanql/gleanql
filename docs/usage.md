@@ -7,19 +7,21 @@ order: 3
 # Using GleanQL
 
 Everything you do with GleanQL follows one rule: **a field access is a data
-requirement**. You read fields like normal object properties; the compiler
-turns those reads into one operation per route. This page tours the whole
-surface in the order you'll meet it — read, write, stay live, then harden for
-production — all without writing a single GraphQL document.
+requirement**. You read fields like normal object properties. The compiler
+turns those reads into one operation per route.
+
+This page tours the whole surface in the order you'll meet it: read, write,
+stay live, then harden for production. You won't write a single GraphQL
+document along the way.
 
 It assumes the plugin is wired up; if it isn't, [Get started](get-started.md)
 is five steps.
 
 ## Reading data
 
-Open a root with the accessor and read fields off it like any object. The
-reads, followed across the whole route (including through JSX props into child
-components), *become* the operation:
+Open a root with the accessor and read fields off it like any object. Those
+reads *become* the operation. The compiler follows them across the whole
+route, including through JSX props into child components:
 
 ```tsx
 import { glean } from "@gleanql/client";
@@ -38,9 +40,11 @@ function BuyBox({ product }: { product: Product }) {
 
 The compiler de-dups the reads across `Hero` + `BuyBox` and emits a single
 `query ProductRoute($handle: String!) { product(handle: $handle) { … } }` plus
-a variables factory. At runtime a read hits the warm cache; a field absent
-from the seed suspends and is batch-fetched. No `select` blocks, no fragments,
-no `ProductRef` — userland types look like schema types.
+a variables factory. At runtime a read hits the warm cache. A field absent
+from the seed suspends and is batch-fetched.
+
+There are no `select` blocks, no fragments, and no `ProductRef` wrapper —
+userland types look like schema types.
 
 > [!NOTE]
 > **Root arguments become variables.** `glean.product({ handle: params.handle })`
@@ -50,9 +54,8 @@ no `ProductRef` — userland types look like schema types.
 ### In islands
 
 A server component reads through the isomorphic `glean` accessor, as above. A
-`"use client"` **island** reads through the `useGlean()` hook — its reads
-still fold into the owning route's operation at compile time, so it hydrates
-warm:
+`"use client"` **island** reads through the `useGlean()` hook. Its reads still
+fold into the owning route's operation at compile time, so it hydrates warm:
 
 ```tsx
 "use client";
@@ -65,9 +68,9 @@ export function Availability({ handle }: { handle: string }) {
 }
 ```
 
-An island re-renders only when a record *it* read changes (per-field
-tracking), and again on hydration/navigation so it re-resolves the page's
-roots. See [@gleanql/client](runtime.md) for the reactivity model.
+Tracking is per-field, so an island re-renders only when a record *it* read
+changes. It also re-renders on hydration and navigation, to re-resolve the
+page's roots. See [@gleanql/client](runtime.md) for the reactivity model.
 
 ### Lists
 
@@ -82,10 +85,11 @@ the operation. A list root (`type Query { todos: [Todo!] }`) needs no wrapper:
 
 ### More of a list (pagination)
 
-Read a connection in render, then `usePaginated` gives you a `fetchMore` that
-re-runs that connection's selection with your cursor args and merges the page
-(default: concat `nodes`). No convention is assumed — you read
-`pageInfo`/cursors yourself, so exactly what you use is fetched:
+Read a connection in render, then hand it to `usePaginated`. The hook returns
+a `fetchMore` that re-runs that connection's selection with your cursor args
+and merges the page in (by default it concatenates `nodes`). No convention is
+assumed: you read `pageInfo` and cursors yourself, so exactly what you use is
+fetched.
 
 ```tsx
 const products = glean.collection({ handle }).products({ first: 20 });
@@ -96,9 +100,10 @@ const { fetchMore, isLoading } = usePaginated(products);
 
 ## Writing data
 
-Mutations keep the contract: a gqty-style selector *defines* the operation,
+Mutations keep the contract. A gqty-style selector *defines* the operation,
 and the build injects its name. The result normalizes into the cache, so every
-reader of the mutated entity updates *in place* — no manual cache surgery:
+reader of the mutated entity updates *in place*. There is no manual cache
+surgery:
 
 ```tsx
 import { useMutation } from "@gleanql/client/client";
@@ -108,18 +113,24 @@ const [toggle, { isLoading }] = useMutation((m, vars: { id: string }) => m.toggl
 await toggle({ id });  // server returns the entity → its `completed` flips wherever it's shown
 ```
 
-A selector can pull several fields back by returning an array/object of reads
-(`(m, vars) => { const t = m.addTodo(vars); return [t.id, t.title, t.completed]; }`).
-The hook returns `[mutate, state]` with `data`/`error`/`userErrors`; it never
-rejects for logical failures.
+A selector can pull several fields back by returning an array or object of
+reads:
+`(m, vars) => { const t = m.addTodo(vars); return [t.id, t.title, t.completed]; }`.
+The hook returns `[mutate, state]` with `data`, `error`, and `userErrors`. It
+never rejects for logical failures.
 
 ### Optimistic UI
 
-For a snappy add/remove, update the UI before the server responds. Field
-changes use `optimistic` (cache writes, auto-rolled-back); list *membership*
-uses `optimisticRoots` (also auto-rolled-back). Generate the id client-side so
-the optimistic row is the final row — the mutation normalizes over the same
-identity, nothing to reconcile:
+For a snappy add or remove, update the UI before the server responds. Two
+options cover the two kinds of change, and both roll back automatically on
+failure:
+
+- `optimistic` — field changes, written straight to the cache.
+- `optimisticRoots` — list *membership* (an added or removed row).
+
+Generate the id client-side so the optimistic row is the final row. The
+mutation then normalizes over the same identity, and there is nothing to
+reconcile:
 
 ```tsx
 const [add] = useMutation(selector, {
@@ -174,9 +185,9 @@ ship.
 
 ### Lock down the wire (persisted operations)
 
-The build compiled every operation the app can send — so the server can refuse
-anything else. Turn it on in one place; the client then sends only sha-256
-hashes (the APQ wire shape), never documents:
+The build compiled every operation the app can send, so the server can refuse
+anything else. Turn it on in one place. The client then sends only sha-256
+hashes in the APQ wire shape — never documents:
 
 ```tsx
 // vite.config.ts
@@ -198,10 +209,10 @@ For a separately-deployed GraphQL server, sync the build-emitted
 
 ### Hand-built operations (dynamic shapes)
 
-The compiler covers reads it can see. For a shape it can't extract — a report
-whose selection your code composes — build the IR by hand and **register** it:
-the build prints + hashes it and ships it like a compiled operation (same
-generated map, same persisted allowlist, same `/__glean` page).
+The compiler covers reads it can see. Some shapes it can't extract — say a
+report whose selection your code composes. For those, build the IR by hand and
+**register** it. The build prints and hashes it, then ships it like a compiled
+operation: same generated map, same persisted allowlist, same `/__glean` page.
 
 ```tsx
 // src/report-operations.ts — exports are OperationIR (run AT BUILD TIME)
@@ -237,8 +248,8 @@ Each surface has one error channel — nothing is swallowed:
 | Surface | What you get |
 | --- | --- |
 | Route preload (server) | `runRoute`/`integration.preload` return `errors` alongside `roots`; a missing root is your 404 branch (see the examples' `preload()`). |
-| Reads (`useGlean`) | a cache miss suspends; if the batched `fetchMissing` *fails*, the suspended promise rejects — a React **error boundary** around the route/island catches it. `unexpectedMissingField: "warn" \| "error"` turns silent misses into console warnings or throws. |
-| `useMutation` | `[mutate, state]` — transport/GraphQL failures land in `state.error`; LOGICAL failures (your schema's `userErrors`) land in `state.userErrors`. `await mutate(vars)` never rejects on logical failures; optimistic writes roll back automatically. |
+| Reads (`useGlean`) | A cache miss suspends. If the batched fetch *fails*, the suspended promise rejects, and a React **error boundary** around the route/island catches it. `unexpectedMissingField: "warn" \| "error"` turns silent misses into warnings or throws. |
+| `useMutation` | Transport/GraphQL failures land in `state.error`. Logical failures — your schema's `userErrors` — land in `state.userErrors`. `await mutate(vars)` never rejects on logical failures, and optimistic writes roll back automatically. |
 | `useSubscription` | `{ data, error }` — a dropped stream surfaces as `error`; the SSE transport auto-reconnects and keeps the stream open. |
 | `refresh()` / `fetchMore()` | returned promises reject on transport failure — `await` them where you trigger them. |
 | Transport | a non-JSON response (proxy 502 HTML) throws a clear `graph fetch: non-JSON response…` error instead of a JSON parse error; GraphQL `errors` always ride the result. |

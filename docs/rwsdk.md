@@ -6,7 +6,7 @@ order: 12
 
 # RedwoodSDK integration
 
-A framework integration target — now one of **two** built-in [framework presets](vite.md) (alongside React Router 7). RedwoodSDK is an *adapter*, not the foundation — the core compiler and runtime have no dependency on it. Like `@gleanql/vite` is to Vite, this package is decoupled from `rwsdk` itself: it matches the framework's shapes structurally (a `RequestInfo`), so it tests in isolation and pins no framework version.
+RedwoodSDK is one of **two** built-in [framework presets](vite.md), alongside React Router 7. It is an *adapter*, not the foundation — the core compiler and runtime have no dependency on it. The package is decoupled from `rwsdk` itself, the same way `@gleanql/vite` is decoupled from Vite. It matches the framework's shapes structurally (a `RequestInfo`), so it tests in isolation and pins no framework version.
 
 > [!NOTE]
 > **RSC vs. isomorphic.** RedwoodSDK is the *RSC* preset (server/client split; the graph snapshot rides the flight stream). The `react-router` preset proves the binding is pluggable with an *isomorphic, non-RSC* host — see `examples/remix-real` and [@gleanql/vite](vite.md).
@@ -24,7 +24,7 @@ Any framework adapter has to answer four questions. This package answers them:
 
 ## Setup
 
-Create one integration with the compiled operations (generated into `@gleanql/client`), the schema, and a transport adapter. `context` contributes auth/locale/env; `clientSafeContext` is the allow-list of context keys safe to serialize — secrets stay server-side.
+Create one integration with the compiled operations (generated into `@gleanql/client`), the schema, and a transport adapter. `context` contributes auth/locale/env. `clientSafeContext` is the allow-list of context keys safe to serialize — secrets stay server-side.
 
 ```tsx
 const integration = createGraphIntegration({
@@ -38,7 +38,15 @@ const integration = createGraphIntegration({
 
 ## Per request
 
-Preload picks the operation, computes variables from the `RequestInfo`, executes via the adapter, seeds a fresh cache, and attaches `{ runtime, graph, roots, variables }` to `requestInfo.ctx`. Concurrent requests are isolated in separate caches.
+Preload does the per-request work:
+
+- picks the operation
+- computes variables from the `RequestInfo`
+- executes via the adapter
+- seeds a fresh cache
+- attaches `{ runtime, graph, roots, variables }` to `requestInfo.ctx`
+
+Concurrent requests are isolated in separate caches.
 
 ```tsx
 await integration.preload(requestInfo, "ProductRoute");
@@ -48,11 +56,11 @@ const product = graph.product({ handle: params.handle });
 product.title;  product.featuredImage?.url;  product.priceRange.minVariantPrice.amount;
 ```
 
-If you prefer a module-level import over reading `ctx` — an app-owned module (say `~/graph`) re-exporting a scoped accessor — back the integration with a `GraphScope` and wrap rendering in `integration.runInScope(requestInfo, render)`.
+You may prefer a module-level import over reading `ctx` — an app-owned module (say `~/graph`) re-exporting a scoped accessor. In that case, back the integration with a `GraphScope` and wrap rendering in `integration.runInScope(requestInfo, render)`.
 
 ## Serialize & hydrate
 
-Graph values are proxies, not JSON — so the cache is serialized, not the values. The hydration script escapes its payload so it cannot break out of the `<script>` element (`<`, `>`, `&`, U+2028/U+2029). On the client, the runtime is rebuilt from the snapshot and the graph re-bound; warm reads hit, missing fields fetch through the client adapter.
+Graph values are proxies, not JSON — so `serializeGraph` serializes the cache, not the values. The hydration script escapes its payload (`<`, `>`, `&`, U+2028/U+2029) so it cannot break out of the `<script>` element. On the client, the runtime is rebuilt from the snapshot and the graph re-bound. Warm reads hit; missing fields fetch through the client adapter.
 
 ```tsx
 // Server (in the Document):
@@ -72,7 +80,7 @@ const { graph } = hydrateGraph(readGraphHydrationPayload()!, { schema, adapter }
 
 ## Mutations
 
-The integration also exposes the write side per request: `getMutator(requestInfo)` returns the `glean.mutate.*` namespace (one callable per compiled mutation operation), and `invalidate(requestInfo, value)` drops a record so the next read re-fetches. Results normalize into the per-request cache, so a mutation is immediately visible through the already-rendered graph.
+The integration also exposes the write side per request. `getMutator(requestInfo)` returns the `glean.mutate.*` namespace — one callable per compiled mutation operation. `invalidate(requestInfo, value)` drops a record so the next read re-fetches. Results normalize into the per-request cache, so a mutation is immediately visible through the already-rendered graph.
 
 ```tsx
 const result = await integration.getMutator(requestInfo).ProductUpdate(
@@ -83,7 +91,7 @@ const result = await integration.getMutator(requestInfo).ProductUpdate(
 
 ## Client islands & refetch (mixing client + RSC)
 
-RSC renders the page server-side; a `"use client"` island can refetch live — with **no hydration boilerplate**. The plugin generates the client glue too: a `@gleanql/client/client` module exposing `useGlean()` (the hydrated graph, re-rendering on cache change) and `refresh(operationName?)` (re-run the page's compiled operation over the wire). The app just imports them.
+RSC renders the page server-side, and a `"use client"` island can refetch live — with **no hydration boilerplate**. The plugin generates the client glue too: a `@gleanql/client/client` module. It exposes `useGlean()`, the hydrated graph that re-renders on cache change. It also exposes `refresh(operationName?)`, which re-runs the page's compiled operation over the wire. The app imports them; nothing else is needed.
 
 ```tsx
 // a "use client" island — the only graph code the app writes
@@ -94,13 +102,13 @@ const product = glean.product({ handle });   // warm read from the hydrated cach
 // <button onClick={() => refresh()}> → /graphql → re-seed → cache notifies → re-render
 ```
 
-`refresh(operationName?)` re-runs the *entire* compiled operation for the current page (or the named one), bypassing cache-first, and re-seeds — it is a whole-operation refetch, not a field-level one. The normalized cache then reconciles by entity identity, so only changed fields actually re-render, but the network request fetches the whole operation; to refetch a smaller slice today, pass a smaller operation name.
+`refresh(operationName?)` re-runs the *entire* compiled operation for the current page, or the named one. It bypasses cache-first and re-seeds. It is a whole-operation refetch, not a field-level one. The normalized cache then reconciles by entity identity, so only changed fields actually re-render. The network request still fetches the whole operation. To refetch a smaller slice today, pass a smaller operation name.
 
-Under the hood the snapshot rides the **RSC flight stream**, not a `<script>` global: `@gleanql/vite` auto-injects a `<GraphHydrate />` server component (from the generated `@gleanql/client/server` — a thin shim over `createGraphServer`) around each route component (the preset's `transformRoute` hook), passing this request's serialized payload. On every render the client side folds it into **one long-lived** browser runtime (`absorbHydrationPayload` → `runtime.absorbRecords`, so the cache accumulates across navigations) pointed at the configured `endpoint` (default `/graphql`), and wires `useSyncExternalStore` to `cache.subscribe`. It builds on the *client-safe* entrypoints `@gleanql/client/runtime` + `@gleanql/client/operations` (no request-scoped accessor → no server-only `rwsdk/worker` in the client bundle). Zero app glue: worker and page files are untouched, and there is no inline state `<script>`, so it sidesteps CSP.
+Under the hood the snapshot rides the **RSC flight stream**, not a `<script>` global. `@gleanql/vite` auto-injects a `<GraphHydrate />` server component around each route component, via the preset's `transformRoute` hook. That component comes from the generated `@gleanql/client/server` — a thin shim over `createGraphServer` — and receives this request's serialized payload. On every render the client side folds the payload into **one long-lived** browser runtime (`absorbHydrationPayload` → `runtime.absorbRecords`), so the cache accumulates across navigations. The runtime points at the configured `endpoint` (default `/graphql`) and wires `useSyncExternalStore` to `cache.subscribe`. It builds on the *client-safe* entrypoints `@gleanql/client/runtime` + `@gleanql/client/operations`. No request-scoped accessor means no server-only `rwsdk/worker` in the client bundle. There is zero app glue: worker and page files are untouched. And there is no inline state `<script>`, so it sidesteps CSP.
 
 ## A mutation island — writes update in place
 
-The write side is a client island too, with the **same zero graph glue**. The generated `@gleanql/client/client` also exports `useMutation` (gqty-style). The selector `(m, vars) => …` is **compile-time only** — it defines the operation (rooted at the `Mutation` type) and types `vars`/`data`, but never runs: the build injects the compiled op name into the call site. Calling `rename(vars)` runs that op, and because the mutation returns the entity (`__typename` + `id`), the result normalizes *in place* into the same cache the page hydrated — so any island reading that record through `useGlean()` updates with no reload.
+The write side is a client island too, with the **same zero graph glue**. The generated `@gleanql/client/client` also exports `useMutation` (gqty-style). The selector `(m, vars) => …` is **compile-time only**. It defines the operation, rooted at the `Mutation` type, and types `vars`/`data`. It never runs — the build injects the compiled op name into the call site. Calling `rename(vars)` runs that op. The mutation returns the entity (`__typename` + `id`), so the result normalizes *in place* into the same cache the page hydrated. Any island reading that record through `useGlean()` updates with no reload.
 
 ```tsx
 // a "use client" mutation island — the only graph code the app writes
@@ -117,11 +125,11 @@ const [rename, { isLoading, error }] = useMutation(
 //   → normalized in place → only THIS record's readers re-render → heading updates, no reload
 ```
 
-Same engine as the server-side `runMutation` — `optimistic` / `update` / `invalidate` are available through the hook's options, and `userErrors` surface on the returned state. See `examples/rwsdk-real`'s `RenameTitle.tsx`.
+The hook runs the same engine as the server-side `runMutation`. `optimistic` / `update` / `invalidate` are available through the hook's options, and `userErrors` surface on the returned state. See `examples/rwsdk-real`'s `RenameTitle.tsx`.
 
 ## The real app — zero glue (`@gleanql/vite`)
 
-`examples/rwsdk-real/` is a genuine RedwoodSDK app (React 19 RSC on workerd) that *boots* (`pnpm --filter @example/rwsdk-real dev`). It commits **no graph glue at all** — just a schema, routes/components, a transport, and one line in `vite.config.mts`:
+`examples/rwsdk-real/` is a genuine RedwoodSDK app — React 19 RSC on workerd — that *boots*: `pnpm --filter @example/rwsdk-real dev`. It commits **no graph glue at all**. The app is a schema, routes/components, a transport, and one line in `vite.config.mts`:
 
 ```tsx
 // vite.config.mts
@@ -137,22 +145,35 @@ export default defineConfig({
 });
 ```
 
-On startup (before the directive scan) the plugin provisions the `@gleanql/client` runtime, runs `@gleanql/codegen` from the schema, compiles the route files with `@gleanql/compiler`, and emits a real **`@gleanql/client`** package into `node_modules` whose `package.json` `exports` declare the generated types. So app code imports by package name — no tsconfig paths, no alias:
+On startup, before the directive scan, the plugin does four things:
+
+- provisions the `@gleanql/client` runtime
+- runs `@gleanql/codegen` from the schema
+- compiles the route files with `@gleanql/compiler`
+- emits a real **`@gleanql/client`** package into `node_modules`, whose `package.json` `exports` declare the generated types
+
+App code therefore imports by package name — no tsconfig paths, no alias:
 
 ```tsx
 import { glean } from "@gleanql/client";
 import type { Product } from "@gleanql/client/schema";
 ```
 
-Two routes (a list `/collections/:handle` and a detail `/products/:handle`) compile to two operations; components live in separate files and the compiler follows the imports. Verified end-to-end on real workerd, including client hydration in the browser.
+Two routes compile to two operations: a list `/collections/:handle` and a detail `/products/:handle`. Components live in separate files, and the compiler follows the imports. The app is verified end-to-end on real workerd, including client hydration in the browser.
 
 ## In-CI worker (no workerd)
 
-`examples/storefront/rwsdk-app/` is a RedwoodSDK-*shaped* worker (`defineApp`/`route`/`Document` from a local shim, since real `rwsdk/worker` needs workerd) that runs in the test suite — `worker.fetch(request)` → an HTML `Response` with the rendered page + hydration payload. It gives CI coverage of the integration without the workerd toolchain.
+`examples/storefront/rwsdk-app/` is a RedwoodSDK-*shaped* worker that runs in the test suite. It takes `defineApp`/`route`/`Document` from a local shim, since real `rwsdk/worker` needs workerd. `worker.fetch(request)` returns an HTML `Response` with the rendered page plus the hydration payload. It gives CI coverage of the integration without the workerd toolchain.
 
 ## Status
 
-Reads *and* writes are complete end-to-end: `examples/storefront/rwsdk.test.ts` drives the *real* compiler output for `ProductRoute.tsx` through the adapter — request → preload → proxy reads → serialize → hydrate — `packages/rwsdk/test/integration.test.ts` covers the mutation + optimistic + invalidation flow, and `rwsdk-app/worker.test.ts` runs the whole thing as a `fetch` handler. RSC-native serialization now ships too — the snapshot rides the flight stream and folds into a long-lived runtime — verified end-to-end on real workerd in `examples/rwsdk-real`.
+Reads *and* writes are complete end-to-end:
+
+- `examples/storefront/rwsdk.test.ts` drives the *real* compiler output for `ProductRoute.tsx` through the adapter: request → preload → proxy reads → serialize → hydrate.
+- `packages/rwsdk/test/integration.test.ts` covers the mutation + optimistic + invalidation flow.
+- `rwsdk-app/worker.test.ts` runs the whole thing as a `fetch` handler.
+
+RSC-native serialization ships too: the snapshot rides the flight stream and folds into a long-lived runtime. It is verified end-to-end on real workerd in `examples/rwsdk-real`.
 
 ---
 

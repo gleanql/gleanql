@@ -6,7 +6,7 @@ order: 10
 
 # `@gleanql/compiler`
 
-Type-analyzes React/TypeScript source, follows prop flow, and extracts the graph read paths that become the operation — behind a swappable backend seam.
+The compiler type-analyzes React/TypeScript source. It follows prop flow and extracts the graph read paths that become the operation. Every type question goes through a swappable backend seam.
 
 ## Entry points
 
@@ -27,7 +27,7 @@ interface AnalyzeResult {
 
 ## How graph types are recognized
 
-A type is graph-backed if it has a literal `__typename` property — which is genuinely the GraphQL `__typename` of an object. So userland types are plain interfaces, no special brand symbol:
+A type is graph-backed if it has a literal `__typename` property. That property is genuinely the GraphQL `__typename` of an object. Userland types are therefore plain interfaces, with no special brand symbol:
 
 ```tsx
 interface Product {
@@ -37,9 +37,9 @@ interface Product {
 type SearchResultItem = Product | Collection; // union → ["Product","Collection"]
 ```
 
-The `TsBackend` reads the literal(s) via a real `ts.TypeChecker`; a union yields multiple names (used for `__typename` narrowing). Field *types* for nested walking come from the schema model, which is authoritative about list-ness, arguments, and identity.
+The `TsBackend` reads the literal(s) via a real `ts.TypeChecker`. A union yields multiple names, which are used for `__typename` narrowing. Field *types* for nested walking come from the schema model. The schema model is authoritative about list-ness, arguments, and identity.
 
-Every type/symbol question goes through `GraphCompilerBackend`, so the engine is swappable. `createBackend("typescript", …)` builds the in-process `TsBackend`; an *experimental* Go-native engine ships behind the same seam — `createTsgoBackend(…)` drives the same `analyzeFile` walker over `@typescript/native-preview`'s AST + checker via an engine-agnostic `AstFacade`. The dependency is optional and dynamically imported (pre-release). The [Vite plugin](vite.md) selects between them with `backend: "typescript" | "tsgo"` and falls back to `typescript` if tsgo can't be resolved.
+Every type/symbol question goes through `GraphCompilerBackend`, so the engine is swappable. `createBackend("typescript", …)` builds the in-process `TsBackend`. An *experimental* Go-native engine ships behind the same seam: `createTsgoBackend(…)` drives the same `analyzeFile` walker over `@typescript/native-preview`'s AST + checker, via an engine-agnostic `AstFacade`. That dependency is optional and dynamically imported, since it is pre-release. The [Vite plugin](vite.md) selects between the engines with `backend: "typescript" | "tsgo"`. It falls back to `typescript` if tsgo can't be resolved.
 
 ## The analyzer
 
@@ -55,7 +55,14 @@ indexRegistries     module-level `const x = glean.components({…})`
   read map + diagnostics only
 ```
 
-A **GraphValue** carries the current GraphQL type, the mutable selection node new reads attach to, a list flag, and a read-map base/path. Entering a component or a list-iteration callback resets the read-map base to the new entity type — which is why `filter((p) => p.availableForSale)` records `Product.availableForSale`, not the full `Collection.products.nodes…` path.
+A **GraphValue** carries four things:
+
+- the current GraphQL type
+- the mutable selection node new reads attach to
+- a list flag
+- a read-map base/path
+
+Entering a component or a list-iteration callback resets the read-map base to the new entity type. That reset is why `filter((p) => p.availableForSale)` records `Product.availableForSale`, not the full `Collection.products.nodes…` path.
 
 ## Supported subset (v1)
 
@@ -82,7 +89,7 @@ A **GraphValue** carries the current GraphQL type, the mutable selection node ne
 
 ## Variables & argument capture
 
-Root-call arguments are lifted into operation variables and a generated factory.
+The compiler lifts root-call arguments into operation variables and a generated factory.
 
 **Simple — a pure context path**
 
@@ -119,7 +126,7 @@ export function getProductRouteVariables(ctx) {
 
 ## Interfaces & unions
 
-`node.__typename === "Product"` guards narrow the union; the analyzer emits inline fragments — fragments are generated internally, never authored by hand.
+A `node.__typename === "Product"` guard narrows the union. The analyzer emits inline fragments for the narrowed branches. Fragments are generated internally, never authored by hand.
 
 ```tsx
 nodes {
@@ -131,11 +138,11 @@ nodes {
 
 ## Lazy boundaries
 
-By default, statically reachable fields are eager — even behind conditionals. To defer, wrap in `<GraphLazy>`: reads inside are excluded from the initial operation and fall through to a runtime fetch when the boundary renders.
+By default, statically reachable fields are eager — even behind conditionals. To defer reads, wrap them in `<GraphLazy>`. Reads inside the boundary are excluded from the initial operation. They fall through to a runtime fetch when the boundary renders.
 
 ## Diagnostics
 
-Unsupported patterns produce clear, actionable messages (part of the golden output).
+Unsupported patterns produce clear, actionable messages. The messages are part of the golden output.
 
 | Code | Trigger |
 | --- | --- |
