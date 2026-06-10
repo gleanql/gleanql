@@ -36,6 +36,11 @@ cache out. Highlights, by package:
   payload for islands), `createMockAdapter` records operations with
   push-driven subscriptions, `mockGraphFetch` intercepts the endpoint by
   operation name.
+- Islands server-render **warm** on both hosts: the page renders inside
+  `<GraphHydrator>`, which carries this request's graph through React context
+  in the SSR pass (request-isolated by construction) — no fallback flash, no
+  server-prop passthrough, mismatch-free hydration by symmetry. Isomorphic
+  hosts get the same via the active graph's own roots.
 
 ### @gleanql/core
 - Operation IR, builder (`q.*` + the `buildQuery` fluent escape hatch),
@@ -56,6 +61,12 @@ cache out. Highlights, by package:
   `buildQuery` module at build time and allowlists its exports.
 - Options: `endpoint`, `framework`, `backend`, `maxCacheRecords`, `strict`,
   `persisted`, `gcKeepPages`, `operations`.
+- Per-preset dep-optimizer handling: rwsdk keys the prebundle cache on an
+  operations digest (a stale prebundle served outdated operations across
+  sessions); react-router excludes the generated package (esbuild cannot
+  apply the app's `~/` alias inside it).
+- Parse-gated emitters: every generated module's output runs through
+  esbuild's parser in CI, across the full option matrix.
 
 ### Known limitations
 - `@defer`/`@stream` deliberately deferred (graphql-js can't execute
