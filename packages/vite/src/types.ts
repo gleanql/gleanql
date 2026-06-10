@@ -178,11 +178,12 @@ export interface GraphDevServer {
   readonly moduleGraph?: { invalidateAll(): void };
 }
 
-/** The vite-config patch the plugin contributes (merged by vite). */
+/** The vite-config patch the plugin contributes (merged by vite). Mutable
+ * shapes on purpose: vite's `UserConfig` wants `string[]`, not `readonly`. */
 export interface GraphViteConfigPatch {
-  readonly optimizeDeps?: {
-    readonly exclude?: readonly string[];
-    readonly esbuildOptions?: { readonly define?: Record<string, string> };
+  optimizeDeps?: {
+    exclude?: string[];
+    esbuildOptions?: { define?: Record<string, string> };
   };
 }
 
