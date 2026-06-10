@@ -6,8 +6,8 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "predev": "node scripts/search-index.mjs",
-    "prebuild": "node scripts/search-index.mjs",
+    "predev": "node scripts/golden-cases.mjs && node scripts/search-index.mjs",
+    "prebuild": "node scripts/golden-cases.mjs && node scripts/search-index.mjs",
     "build": "vite build",
     "dev": "vite dev",
     "preview": "vite preview",
@@ -16,6 +16,7 @@
     "types": "tsc"
   },
   "dependencies": {
+    "marked": "^18.0.5",
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "react-server-dom-webpack": "19.2.6",

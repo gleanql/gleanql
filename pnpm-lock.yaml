@@ -26,6 +26,9 @@ importers:
 
   docs:
     dependencies:
+      marked:
+        specifier: ^18.0.5
+        version: 18.0.5
       react:
         specifier: 19.2.6
         version: 19.2.6
@@ -2874,6 +2877,11 @@ packages:
   markdown-extensions@2.0.0:
     resolution: {integrity: sha512-o5vL7aDWatOTX8LzaS1WMoaoxIiLRQJuIKKe2wAw6IeULDHaqbiqiggmx+pKvZDb1Sj+pE46Sn1T7lCqfFtg1Q==}
     engines: {node: '>=16'}
+
+  marked@18.0.5:
+    resolution: {integrity: sha512-S6GcvALHg6K4ohtu4E7x0a1AqhAjp6cV8KhLSyN9qVapnzJkusVBxZRcIU9AeYsbe6P1hKDusSbEOzGyyuce6w==}
+    engines: {node: '>= 20'}
+    hasBin: true
 
   math-intrinsics@1.1.0:
     resolution: {integrity: sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==}
@@ -6451,6 +6459,8 @@ snapshots:
       pify: 3.0.0
 
   markdown-extensions@2.0.0: {}
+
+  marked@18.0.5: {}
 
   math-intrinsics@1.1.0: {}
 

@@ -1,57 +1,18 @@
 import { MenuButton, Search, ThemeToggle, Toc } from "./islands";
+import { NAV_GROUPS, PAGES } from "./content";
 
 /**
  * The docs chrome: sticky top bar (brand · ⌘K search · GitHub · theme), grouped
  * sidebar with the harvest-gold active rail, the article column (kicker derived
- * from the active page's group), prev/next footer cards, and the scroll-spy
- * "On this page" rail. `active` is the page's path (e.g. "usage.html").
+ * from the page's group), prev/next footer cards, and the scroll-spy "On this
+ * page" rail. Navigation derives entirely from the markdown files' frontmatter
+ * (see content.ts) — there is nothing to register here.
  */
-
-export interface NavPage {
-  readonly href: string;
-  readonly label: string;
-}
-
-export const NAV_GROUPS: ReadonlyArray<{ readonly group: string; readonly pages: readonly NavPage[] }> = [
-  {
-    group: "Guide",
-    pages: [
-      { href: "index.html", label: "Overview" },
-      { href: "get-started.html", label: "Get started" },
-      { href: "usage.html", label: "Using Glean" },
-      { href: "comparison.html", label: "vs Relay & gqty" },
-      { href: "architecture.html", label: "Architecture & pipeline" },
-    ],
-  },
-  {
-    group: "Internals",
-    pages: [
-      { href: "core.html", label: "@gleanql/core" },
-      { href: "compiler.html", label: "@gleanql/compiler" },
-      { href: "runtime.html", label: "@gleanql/client" },
-      { href: "vite.html", label: "@gleanql/vite" },
-      { href: "rwsdk.html", label: "RedwoodSDK integration" },
-      { href: "react-router.html", label: "React Router integration" },
-      { href: "codegen.html", label: "@gleanql/codegen" },
-    ],
-  },
-  {
-    group: "Reference",
-    pages: [
-      { href: "golden-cases.html", label: "Golden cases" },
-      { href: "api.html", label: "API reference" },
-      { href: "decisions.html", label: "Design decisions" },
-    ],
-  },
-];
-
-const FLAT = NAV_GROUPS.flatMap((g) => g.pages.map((p) => ({ ...p, group: g.group })));
-
 export function DocsLayout({ active, children }: { active: string; children: React.ReactNode }) {
-  const index = FLAT.findIndex((p) => p.href === active);
-  const current = FLAT[index];
-  const prev = index > 0 ? FLAT[index - 1] : undefined;
-  const next = index >= 0 && index < FLAT.length - 1 ? FLAT[index + 1] : undefined;
+  const index = PAGES.findIndex((p) => p.slug === active);
+  const current = PAGES[index];
+  const prev = index > 0 ? PAGES[index - 1] : undefined;
+  const next = index >= 0 && index < PAGES.length - 1 ? PAGES[index + 1] : undefined;
 
   return (
     <>
@@ -83,9 +44,9 @@ export function DocsLayout({ active, children }: { active: string; children: Rea
             {NAV_GROUPS.map(({ group, pages }) => (
               <div key={group}>
                 <div className="group">{group}</div>
-                {pages.map(({ href, label }) => (
-                  <a key={href} href={`/${href}`} className={href === active ? "active" : undefined}>
-                    {label}
+                {pages.map(({ slug, title }) => (
+                  <a key={slug} href={`/${slug}`} className={slug === active ? "active" : undefined}>
+                    {title}
                   </a>
                 ))}
               </div>
@@ -101,17 +62,17 @@ export function DocsLayout({ active, children }: { active: string; children: Rea
             {(prev || next) && (
               <nav className="pagenav">
                 {prev ? (
-                  <a href={`/${prev.href}`}>
+                  <a href={`/${prev.slug}`}>
                     <span className="dir">← Previous</span>
-                    <span className="title">{prev.label}</span>
+                    <span className="title">{prev.title}</span>
                   </a>
                 ) : (
                   <span />
                 )}
                 {next ? (
-                  <a className="next" href={`/${next.href}`}>
+                  <a className="next" href={`/${next.slug}`}>
                     <span className="dir">Next →</span>
-                    <span className="title">{next.label}</span>
+                    <span className="title">{next.title}</span>
                   </a>
                 ) : null}
               </nav>
