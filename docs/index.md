@@ -6,11 +6,14 @@ order: 1
 
 # GleanQL — TypeScript-Native GraphQL Query Compiler
 
-A framework-agnostic data system that uses GraphQL *internally* but never exposes GraphQL documents, fragments, or selector blocks in application code. Components look like ordinary React/TypeScript; the compiler infers the operation from normal field reads and prop flow.
+You write plain React components. GleanQL's compiler reads them at build time
+and writes the GraphQL for you — one operation per route, typed, hashed, and
+allowlisted. There are no queries, fragments, or `useQuery` wrappers anywhere
+in your app code.
 
 ## The idea in one screen
 
-You write plain components. Field access *is* the data requirement.
+Field access *is* the data requirement:
 
 ```tsx
 import { glean } from "~/graph";
@@ -27,7 +30,9 @@ function BuyBox({ product }: { product: Product }) {
 }
 ```
 
-The compiler reads those property accesses across the whole route, follows the value through JSX props, de-duplicates, and emits one operation — plus a variables factory and a per-component read map:
+The compiler reads those property accesses across the whole route — following
+the value through JSX props into `BuyBox` — de-duplicates them, and emits one
+operation:
 
 ```graphql
 query ProductRoute($handle: String!) {
@@ -44,21 +49,36 @@ query ProductRoute($handle: String!) {
 }
 ```
 
-> [!NOTE]
-> **No GraphQL in app code.** No hand-written fragments, no `select` blocks, no `dataComponent(...)` wrappers, no exposed `ProductRef` type. Userland types look like schema types (`Product`, `Image`, `MoneyV2`).
+Notice what's *not* in the component: no fragment, no `select` block, no
+generated `ProductRef` type. `Product` looks like the schema type, because it
+is one.
 
-> [!NOTE]
-> **Writes, the same way.** Mutations are compile-time too: a gqty-style `useMutation((m, vars) => m.cartLinesAdd(vars).cart.totalQuantity)` selector compiles to a named operation — no schema convention, no hand-written document. The result normalizes into the cache, so every read of a mutated entity updates in place.
+## Everything else follows the same rule
 
-> [!NOTE]
-> **Fine-grained reactivity.** The normalized cache versions each record, so a component re-renders only on the records it actually read — a mutation or refetch skips the components whose records are untouched.
+The read side is half the story. Writes, live data, and re-rendering all keep
+the same contract — you express intent in plain TypeScript, the build does the
+GraphQL:
 
-## What this repository contains
+- **Mutations** are compile-time selectors: `useMutation((m, vars) =>
+  m.cartLinesAdd(vars).cart.totalQuantity)` becomes a named operation, and its
+  result normalizes into the cache so every read of the mutated entity updates
+  in place.
+- **Subscriptions** compile the same way and stream over SSE or `graphql-ws`;
+  each pushed payload folds into the cache.
+- **Re-rendering is field-grained.** The normalized cache versions each
+  record, so a component re-renders only when a record *it actually read*
+  changes.
+- **The wire can be locked.** Every build emits a sha-256 allowlist of every
+  operation the app can send; flip `persisted: true` and only known hashes
+  cross the network.
 
-It started as the PoC milestone from the implementation brief — taking `.tsx` source all the way to a validated GraphQL operation and a Suspense-aware runtime — and has since grown the write side (`useMutation`), fine-grained reactivity, and the RedwoodSDK + React Router integrations, each end-to-end with tests.
+The [task tour](usage.md) walks each of these with running code.
 
-> [!NOTE]
-> An app installs **two** packages: `@gleanql/client` (runtime) and `@gleanql/vite` (build plugin). The rest are internal building blocks.
+## The packages
+
+An app installs **two** packages — the runtime it imports from, and the build
+plugin that generates everything into it. The other three are internal
+building blocks.
 
 <div class="cards">
   <div class="card"><h3>@gleanql/client</h3><p>The runtime you install: cache, Suspense, graph proxies, request scope, transports, the React hooks — plus a <code>generated/</code> slot for the schema.</p><a href="/runtime">Read →</a></div>
@@ -68,16 +88,7 @@ It started as the PoC milestone from the implementation brief — taking `.tsx` 
   <div class="card"><h3>@gleanql/codegen</h3><p>Introspection → the <code>SchemaModel</code>, branded TS types, and the <code>glean</code> accessors.</p><a href="/codegen">Read →</a></div>
 </div>
 
-## Quick start
-
-Head to [Get started](get-started.md) — install two packages, point the plugin at your schema, write a component. The build gives you one compiled operation per route, a typed accessor, a normalized reactive cache, a persisted-operation allowlist, and the `/__glean` devtools page.
-
-> [!NOTE]
-> **Three real, bootable examples.** `examples/rwsdk-real` is a genuine RedwoodSDK app (React 19 RSC on workerd) demoing persisted mode, registered operations, live subscriptions and the event channel; `examples/rwsdk-todo` is TodoMVC on a SQLite Durable Object with optimistic membership; `examples/remix-real` is the same data layer on React Router 7 (isomorphic SSR — not RSC), proving the framework binding is pluggable. None commit any graph glue.
-
-Working on GleanQL itself? `pnpm install && pnpm test` runs the full suite (~400 tests: golden fixtures through two type-checker engines, runtime, adapters, codegen, the build plugin); `pnpm typecheck` covers every package against one root tsconfig.
-
-## How it fits together
+## How a build works
 
 ```flow
   .tsx source
@@ -102,8 +113,25 @@ Working on GleanQL itself? `pnpm install && pnpm test` runs the full suite (~400
   └──────────────────────────┘
 ```
 
-To build with it, head to [Using GleanQL](usage.md) — a task-oriented tour (read, mutate, paginate, subscribe, optimistic UI). To see how this compares to the alternatives, read [vs Relay & gqty](comparison.md). For the internals, continue to [Architecture & pipeline](architecture.md) for the worked example, or jump to a page on the left.
+Every generated operation is validated against the real schema with
+graphql-js, and the whole pipeline is locked by ~400 tests — including golden
+fixtures run through two type-checker engines.
 
----
+## Where to go
 
-GleanQL — TypeScript-Native GraphQL Query Compiler — ~400 tests, type-clean. Generated operations are validated against the real schema with graphql-js.
+1. **[Get started](get-started.md)** — install two packages, point the plugin
+   at your schema, write a component. Five steps, no GraphQL.
+2. **[Using GleanQL](usage.md)** — the task tour: read, mutate, paginate,
+   subscribe, go optimistic, lock down the wire.
+3. **[vs Relay & gqty](comparison.md)** — where GleanQL sits: gqty's developer
+   experience with Relay's runtime characteristics.
+4. **[Architecture & pipeline](architecture.md)** — the worked example, stage
+   by stage, for the internals.
+
+> [!NOTE]
+> **Three bootable examples** live in the repo: `examples/rwsdk-real` (a
+> RedwoodSDK storefront — islands, live SSE prices, persisted mode, a typed
+> registered operation), `examples/rwsdk-todo` (TodoMVC on a SQLite Durable
+> Object with optimistic membership), and `examples/remix-real` (the same data
+> layer on React Router 7 — isomorphic SSR, no RSC). None commit any generated
+> glue.

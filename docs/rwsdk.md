@@ -13,7 +13,7 @@ A framework integration target — now one of **two** built-in [framework preset
 
 ## What an adapter answers
 
-The brief asks four questions of any framework adapter. This package answers them:
+Any framework adapter has to answer four questions. This package answers them:
 
 | Question | How |
 | --- | --- |

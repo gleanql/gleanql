@@ -36,7 +36,7 @@ Request *context* (auth token, shop domain, locale, env) is used only to build h
 
 ## Cache identity model
 
-Two storage identities, exactly as the brief specifies:
+Two storage identities:
 
 | Identity | Key | When |
 | --- | --- | --- |
@@ -112,7 +112,7 @@ One channel per surface: a failed `fetchMissing` *rejects* the suspended read's 
 
 ## Missing-field batching
 
-Multiple misses in the same tick batch into a single `fetchMissing` call (one patch operation). This is the runtime side of the brief's "runtime missing-field batching".
+Multiple misses in the same tick batch into a single `fetchMissing` call (one patch operation). One render pass produces at most one patch request, no matter how many fields it missed.
 
 ```tsx
 new GraphRuntime({

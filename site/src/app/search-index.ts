@@ -282,12 +282,6 @@ export default [
     "heading": "graphql (graphql-js) is a test-only dependency"
   },
   {
-    "href": "/decisions#component-only-brief-examples-are-wrapped-in-a-route",
-    "title": "Design decisions",
-    "group": "Reference",
-    "heading": "Component-only brief examples are wrapped in a route"
-  },
-  {
     "href": "/decisions#hybrid-authority-in-v1",
     "title": "Design decisions",
     "group": "Reference",
@@ -318,10 +312,10 @@ export default [
     "heading": "Subscriptions compile like mutations; transport stays behind the adapter"
   },
   {
-    "href": "/decisions#deferred-per-the-brief-s-v1-non-goals",
+    "href": "/decisions#deliberately-deferred",
     "title": "Design decisions",
     "group": "Reference",
-    "heading": "Deferred (per the brief's v1 non-goals)"
+    "heading": "Deliberately deferred"
   },
   {
     "href": "/decisions#defer-stream-a-decision-not-yet-a-feature",
@@ -609,22 +603,28 @@ export default [
     "heading": "The idea in one screen"
   },
   {
-    "href": "/index#what-this-repository-contains",
+    "href": "/index#everything-else-follows-the-same-rule",
     "title": "Overview",
     "group": "Guide",
-    "heading": "What this repository contains"
+    "heading": "Everything else follows the same rule"
   },
   {
-    "href": "/index#quick-start",
+    "href": "/index#the-packages",
     "title": "Overview",
     "group": "Guide",
-    "heading": "Quick start"
+    "heading": "The packages"
   },
   {
-    "href": "/index#how-it-fits-together",
+    "href": "/index#how-a-build-works",
     "title": "Overview",
     "group": "Guide",
-    "heading": "How it fits together"
+    "heading": "How a build works"
+  },
+  {
+    "href": "/index#where-to-go",
+    "title": "Overview",
+    "group": "Guide",
+    "heading": "Where to go"
   },
   {
     "href": "/react-router",
@@ -851,76 +851,28 @@ export default [
     "group": "Guide"
   },
   {
-    "href": "/usage#1-install-wire-up",
+    "href": "/usage#reading-data",
     "title": "Using GleanQL",
     "group": "Guide",
-    "heading": "1 · Install & wire up"
+    "heading": "Reading data"
   },
   {
-    "href": "/usage#2-read-data",
+    "href": "/usage#writing-data",
     "title": "Using GleanQL",
     "group": "Guide",
-    "heading": "2 · Read data"
+    "heading": "Writing data"
   },
   {
-    "href": "/usage#3-server-components-vs-islands",
+    "href": "/usage#staying-live",
     "title": "Using GleanQL",
     "group": "Guide",
-    "heading": "3 · Server components vs. islands"
+    "heading": "Staying live"
   },
   {
-    "href": "/usage#4-lists-list-roots",
+    "href": "/usage#hardening-for-production",
     "title": "Using GleanQL",
     "group": "Guide",
-    "heading": "4 · Lists & list roots"
-  },
-  {
-    "href": "/usage#5-write-data-mutations",
-    "title": "Using GleanQL",
-    "group": "Guide",
-    "heading": "5 · Write data (mutations)"
-  },
-  {
-    "href": "/usage#6-optimistic-ui",
-    "title": "Using GleanQL",
-    "group": "Guide",
-    "heading": "6 · Optimistic UI"
-  },
-  {
-    "href": "/usage#7-paginate",
-    "title": "Using GleanQL",
-    "group": "Guide",
-    "heading": "7 · Paginate"
-  },
-  {
-    "href": "/usage#8-live-data-subscriptions",
-    "title": "Using GleanQL",
-    "group": "Guide",
-    "heading": "8 · Live data (subscriptions)"
-  },
-  {
-    "href": "/usage#9-refetch",
-    "title": "Using GleanQL",
-    "group": "Guide",
-    "heading": "9 · Refetch"
-  },
-  {
-    "href": "/usage#10-lock-down-the-wire-persisted-operations",
-    "title": "Using GleanQL",
-    "group": "Guide",
-    "heading": "10 · Lock down the wire (persisted operations)"
-  },
-  {
-    "href": "/usage#11-hand-built-operations-dynamic-shapes",
-    "title": "Using GleanQL",
-    "group": "Guide",
-    "heading": "11 · Hand-built operations (dynamic shapes)"
-  },
-  {
-    "href": "/usage#12-handle-errors",
-    "title": "Using GleanQL",
-    "group": "Guide",
-    "heading": "12 · Handle errors"
+    "heading": "Hardening for production"
   },
   {
     "href": "/usage#where-to-go-next",

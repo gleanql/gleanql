@@ -6,11 +6,11 @@ order: 15
 
 # Design decisions & deviations
 
-Where an implementation choice was non-obvious or departs from the brief, here's what was decided and why.
+Where an implementation choice was non-obvious, here's what was decided and why.
 
 ## Consistent `__typename` injection
 
-Every non-root object selection gets `__typename`; types exposing `id` also get `id`. The brief's prose ("include `__typename` when needed for existence/discrimination") and its page-3 example agree with this. A later snippet omits `__typename` on the pure-scalar `MoneyV2` *but keeps it on the structurally identical `Image`* — an internal inconsistency. We chose the consistent rule, so generated documents include `__typename` on `MoneyV2` / `ProductConnection` too. Lives in `merger.ts`.
+Every non-root object selection gets `__typename`; types exposing `id` also get `id`. One uniform rule, no exceptions for pure-scalar leaf objects like `MoneyV2` — existence checks and union discrimination always work, and generated documents stay predictable. Lives in `merger.ts`.
 
 ## `ttsc` backend = the `typescript` compiler API
 
@@ -18,11 +18,7 @@ The first backend uses a real `ts.Program` + `TypeChecker`. All type/symbol quer
 
 ## `graphql` (graphql-js) is a test-only dependency
 
-It is used in tests as a *correctness oracle*: every generated operation is parsed and validated against an SDL form of the schema. It is not a runtime or transport dependency — the runtime owns cache identity and Suspense, as the brief requires (no overlapping normalized client cache).
-
-## Component-only brief examples are wrapped in a route
-
-Several brief examples are bare components. In the golden fixtures they're wrapped in a thin route so each produces a full, validatable operation. The merging behavior exercised is identical.
+It is used in tests as a *correctness oracle*: every generated operation is parsed and validated against an SDL form of the schema. It is not a runtime or transport dependency — the runtime owns cache identity and Suspense itself, with no second normalized cache underneath.
 
 ## Hybrid authority in v1
 
@@ -44,14 +40,14 @@ Rather than per-key subscription fan-out, the cache keeps **version counters**, 
 
 A `useSubscription((s, vars) => s.productChanged(vars).price)` selector compiles exactly like a mutation — rooted at the `Subscription` type, the build injects the op name — so the discovery, binding and analyzer paths are *shared* (one selector-hook code path, not two). The runtime hook drives the adapter's `subscribe` async-iterable and folds each pushed result into the normalized cache, so fine-grained reactivity re-renders only the readers of a changed record. **Transport is the adapter's job, not the runtime's:** the in-box fetch adapter implements `subscribe` over Server-Sent Events (`EventSource`), which needs no extra client library and streams fine for the example; a production app that prefers WebSockets passes a `graphql-ws` client to the built-in `createGraphWsAdapter` — same seam, no compile or hook changes. (graphql-ws carries every operation kind, so that one adapter drives both `execute` and `subscribe`.)
 
-## Deferred (per the brief's v1 non-goals)
+## Deliberately deferred
 
 - **Lazy component *data*** — the `<GraphLazy>` *boundary* is wired (excluded fields fall through to runtime fetches); per-view lazy manifests are not.
 - **Imported-helper body analysis — now SHIPPED.** A graph value passed to an imported function (`formatPrice(product.priceRange.minVariantPrice)`) resolves through the type-checker, its body is walked, and its reads fold into the operation attributed to the helper's name — same for function references in `.map(renderRow)`. Unanalyzable callbacks fail the build with `unsupported-list-flow` rather than under-fetching.
 - **Subscription auth / resume policy** — the `graphql-ws` transport ships, but reconnect/resume semantics and per-subscription auth are left to the app's client config.
 
 > [!NOTE]
-> Since the original brief: mutations (server `runMutation` + the compile-time `useMutation` hook), subscriptions (`useSubscription` over SSE *and* the built-in `graphql-ws` transport), top-level list roots (`glean.todos()`), fiber-scoped read attribution, the RedwoodSDK and React Router adapters, connection pagination (`usePaginated`), fine-grained reactivity, persisted operations (sha-256 manifest + `persisted: true` wire mode + `createPersistedResolver` allowlist — live in `examples/rwsdk-real`), and reference-counted store retention (mounted readers pin what they read; `cache.gc()` sweeps the rest) all shipped — see the entries above.
+> Shipped since the first cut: mutations (server `runMutation` + the compile-time `useMutation` hook), subscriptions (`useSubscription` over SSE *and* the built-in `graphql-ws` transport), top-level list roots (`glean.todos()`), fiber-scoped read attribution, the RedwoodSDK and React Router adapters, connection pagination (`usePaginated`), fine-grained reactivity, persisted operations (sha-256 manifest + `persisted: true` wire mode + `createPersistedResolver` allowlist — live in `examples/rwsdk-real`), and reference-counted store retention (mounted readers pin what they read; `cache.gc()` sweeps the rest) all shipped — see the entries above.
 
 ## `@defer` / `@stream`: a decision, not (yet) a feature
 

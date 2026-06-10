@@ -97,7 +97,7 @@ A field that appears only once keeps its bare name, even with arguments.
 Every *non-root* object selection gets `__typename`; types that expose an `id` field also get `id` — even if no component read them.
 
 > [!WARNING]
-> **Consistent rule.** We always inject `__typename` for object selections, including pure-scalar leaf objects like `MoneyV2`. The brief's prose and its page-3 example agree; one later snippet omits it on `MoneyV2` but keeps it on the structurally identical `Image` — an internal inconsistency we resolve in favor of consistency. See [Design decisions](decisions.md).
+> **Consistent rule.** `__typename` is always injected for object selections — including pure-scalar leaf objects like `MoneyV2`. One uniform rule keeps generated documents predictable; see [Design decisions](decisions.md).
 
 ### 4 · Deterministic order
 
