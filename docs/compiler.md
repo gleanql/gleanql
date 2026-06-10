@@ -1,7 +1,7 @@
 ---
 title: @gleanql/compiler
-group: Internals
-order: 7
+group: Packages
+order: 9
 ---
 
 # `@gleanql/compiler`

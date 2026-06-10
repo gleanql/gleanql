@@ -20,7 +20,7 @@ export interface DocPage {
   readonly body: string;
 }
 
-const GROUP_ORDER = ["Guide", "Internals", "Reference"];
+const GROUP_ORDER = ["Guide", "Packages", "Integrations", "Reference"];
 
 const raw = import.meta.glob("../../../docs/*.md", { query: "?raw", import: "default", eager: true }) as Record<
   string,

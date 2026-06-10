@@ -79,30 +79,30 @@ export default [
   {
     "href": "/codegen",
     "title": "@gleanql/codegen",
-    "group": "Internals"
+    "group": "Packages"
   },
   {
     "href": "/codegen#inputs-outputs",
     "title": "@gleanql/codegen",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Inputs & outputs"
   },
   {
     "href": "/codegen#usage",
     "title": "@gleanql/codegen",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Usage"
   },
   {
     "href": "/codegen#why-branded-types",
     "title": "@gleanql/codegen",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Why branded types"
   },
   {
     "href": "/codegen#loop-closure",
     "title": "@gleanql/codegen",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Loop closure"
   },
   {
@@ -143,119 +143,119 @@ export default [
   {
     "href": "/compiler",
     "title": "@gleanql/compiler",
-    "group": "Internals"
+    "group": "Packages"
   },
   {
     "href": "/compiler#entry-points",
     "title": "@gleanql/compiler",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Entry points"
   },
   {
     "href": "/compiler#how-graph-types-are-recognized",
     "title": "@gleanql/compiler",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "How graph types are recognized"
   },
   {
     "href": "/compiler#the-analyzer",
     "title": "@gleanql/compiler",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "The analyzer"
   },
   {
     "href": "/compiler#supported-subset-v1",
     "title": "@gleanql/compiler",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Supported subset (v1)"
   },
   {
     "href": "/compiler#variables-argument-capture",
     "title": "@gleanql/compiler",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Variables & argument capture"
   },
   {
     "href": "/compiler#dynamic-components-tiers",
     "title": "@gleanql/compiler",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Dynamic components (tiers)"
   },
   {
     "href": "/compiler#interfaces-unions",
     "title": "@gleanql/compiler",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Interfaces & unions"
   },
   {
     "href": "/compiler#lazy-boundaries",
     "title": "@gleanql/compiler",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Lazy boundaries"
   },
   {
     "href": "/compiler#diagnostics",
     "title": "@gleanql/compiler",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Diagnostics"
   },
   {
     "href": "/core",
     "title": "@gleanql/core",
-    "group": "Internals"
+    "group": "Packages"
   },
   {
     "href": "/core#query-ir",
     "title": "@gleanql/core",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Query IR"
   },
   {
     "href": "/core#the-q-builder",
     "title": "@gleanql/core",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "The q. builder"
   },
   {
     "href": "/core#the-selection-merger",
     "title": "@gleanql/core",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "The selection merger"
   },
   {
     "href": "/core#graphql-printer",
     "title": "@gleanql/core",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "GraphQL printer"
   },
   {
     "href": "/core#schema-model",
     "title": "@gleanql/core",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Schema model"
   },
   {
     "href": "/core#operation-artifact",
     "title": "@gleanql/core",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Operation artifact"
   },
   {
     "href": "/core#devtools",
     "title": "@gleanql/core",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Devtools"
   },
   {
     "href": "/core#human-authored-escape-hatch",
     "title": "@gleanql/core",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Human-authored escape hatch"
   },
   {
     "href": "/core#directives",
     "title": "@gleanql/core",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Directives"
   },
   {
@@ -629,220 +629,220 @@ export default [
   {
     "href": "/react-router",
     "title": "React Router integration",
-    "group": "Internals"
+    "group": "Integrations"
   },
   {
     "href": "/react-router#the-one-seam-a-shared-scope",
     "title": "React Router integration",
-    "group": "Internals",
+    "group": "Integrations",
     "heading": "The one seam: a shared scope"
   },
   {
     "href": "/react-router#setup",
     "title": "React Router integration",
-    "group": "Internals",
+    "group": "Integrations",
     "heading": "Setup"
   },
   {
     "href": "/react-router#per-request-the-loader-render-handoff",
     "title": "React Router integration",
-    "group": "Internals",
+    "group": "Integrations",
     "heading": "Per request — the loader→render handoff"
   },
   {
     "href": "/react-router#serialize-hydrate-loader-data-not-a-script",
     "title": "React Router integration",
-    "group": "Internals",
+    "group": "Integrations",
     "heading": "Serialize & hydrate (loader data, not a script)"
   },
   {
     "href": "/react-router#components-islands",
     "title": "React Router integration",
-    "group": "Internals",
+    "group": "Integrations",
     "heading": "Components & islands"
   },
   {
     "href": "/react-router#the-real-app-zero-glue",
     "title": "React Router integration",
-    "group": "Internals",
+    "group": "Integrations",
     "heading": "The real app — zero glue"
   },
   {
     "href": "/react-router#why-it-works-without-an-adapter-package",
     "title": "React Router integration",
-    "group": "Internals",
+    "group": "Integrations",
     "heading": "Why it works without an adapter package"
   },
   {
     "href": "/runtime",
     "title": "@gleanql/client",
-    "group": "Internals"
+    "group": "Packages"
   },
   {
     "href": "/runtime#client-adapter-the-only-transport-seam",
     "title": "@gleanql/client",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Client adapter (the only transport seam)"
   },
   {
     "href": "/runtime#cache-identity-model",
     "title": "@gleanql/client",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Cache identity model"
   },
   {
     "href": "/runtime#suspense-aware-reads",
     "title": "@gleanql/client",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Suspense-aware reads"
   },
   {
     "href": "/runtime#reactivity-cache-first-refetch",
     "title": "@gleanql/client",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Reactivity & cache-first refetch"
   },
   {
     "href": "/runtime#store-retention-gc-reference-counted-relay-style",
     "title": "@gleanql/client",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Store retention & GC (reference-counted, Relay-style)"
   },
   {
     "href": "/runtime#error-surfaces",
     "title": "@gleanql/client",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Error surfaces"
   },
   {
     "href": "/runtime#missing-field-batching",
     "title": "@gleanql/client",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Missing-field batching"
   },
   {
     "href": "/runtime#seeding-result-normalization",
     "title": "@gleanql/client",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Seeding & result normalization"
   },
   {
     "href": "/runtime#runtime-graph-proxies",
     "title": "@gleanql/client",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Runtime graph proxies"
   },
   {
     "href": "/runtime#request-scope",
     "title": "@gleanql/client",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Request scope"
   },
   {
     "href": "/runtime#the-route-flow-framework-seam",
     "title": "@gleanql/client",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "The route flow (framework seam)"
   },
   {
     "href": "/runtime#hydration-two-models",
     "title": "@gleanql/client",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Hydration — two models"
   },
   {
     "href": "/runtime#client-side-refresh",
     "title": "@gleanql/client",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Client-side refresh()"
   },
   {
     "href": "/runtime#list-root-membership-appendtoroot-removefromroot",
     "title": "@gleanql/client",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "List-root membership (appendToRoot / removeFromRoot)"
   },
   {
     "href": "/runtime#mutations-invalidation",
     "title": "@gleanql/client",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Mutations & invalidation"
   },
   {
     "href": "/runtime#client-hooks-islands",
     "title": "@gleanql/client",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Client hooks (islands)"
   },
   {
     "href": "/rwsdk",
     "title": "RedwoodSDK integration",
-    "group": "Internals"
+    "group": "Integrations"
   },
   {
     "href": "/rwsdk#what-an-adapter-answers",
     "title": "RedwoodSDK integration",
-    "group": "Internals",
+    "group": "Integrations",
     "heading": "What an adapter answers"
   },
   {
     "href": "/rwsdk#setup",
     "title": "RedwoodSDK integration",
-    "group": "Internals",
+    "group": "Integrations",
     "heading": "Setup"
   },
   {
     "href": "/rwsdk#per-request",
     "title": "RedwoodSDK integration",
-    "group": "Internals",
+    "group": "Integrations",
     "heading": "Per request"
   },
   {
     "href": "/rwsdk#serialize-hydrate",
     "title": "RedwoodSDK integration",
-    "group": "Internals",
+    "group": "Integrations",
     "heading": "Serialize & hydrate"
   },
   {
     "href": "/rwsdk#boundary-rules",
     "title": "RedwoodSDK integration",
-    "group": "Internals",
+    "group": "Integrations",
     "heading": "Boundary rules"
   },
   {
     "href": "/rwsdk#mutations",
     "title": "RedwoodSDK integration",
-    "group": "Internals",
+    "group": "Integrations",
     "heading": "Mutations"
   },
   {
     "href": "/rwsdk#client-islands-refetch-mixing-client-rsc",
     "title": "RedwoodSDK integration",
-    "group": "Internals",
+    "group": "Integrations",
     "heading": "Client islands & refetch (mixing client + RSC)"
   },
   {
     "href": "/rwsdk#a-mutation-island-writes-update-in-place",
     "title": "RedwoodSDK integration",
-    "group": "Internals",
+    "group": "Integrations",
     "heading": "A mutation island — writes update in place"
   },
   {
     "href": "/rwsdk#the-real-app-zero-glue-gleanql-vite",
     "title": "RedwoodSDK integration",
-    "group": "Internals",
+    "group": "Integrations",
     "heading": "The real app — zero glue (@gleanql/vite)"
   },
   {
     "href": "/rwsdk#in-ci-worker-no-workerd",
     "title": "RedwoodSDK integration",
-    "group": "Internals",
+    "group": "Integrations",
     "heading": "In-CI worker (no workerd)"
   },
   {
     "href": "/rwsdk#status",
     "title": "RedwoodSDK integration",
-    "group": "Internals",
+    "group": "Integrations",
     "heading": "Status"
   },
   {
@@ -883,54 +883,54 @@ export default [
   {
     "href": "/vite",
     "title": "@gleanql/vite",
-    "group": "Internals"
+    "group": "Packages"
   },
   {
     "href": "/vite#usage",
     "title": "@gleanql/vite",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Usage"
   },
   {
     "href": "/vite#what-it-does-on-startup",
     "title": "@gleanql/vite",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "What it does on startup"
   },
   {
     "href": "/vite#plugin-options",
     "title": "@gleanql/vite",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Plugin options"
   },
   {
     "href": "/vite#devtools-glean-live-recompilation",
     "title": "@gleanql/vite",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Devtools (/glean) & live recompilation"
   },
   {
     "href": "/vite#type-check-backend-typescript-tsgo",
     "title": "@gleanql/vite",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Type-check backend (typescript / tsgo)"
   },
   {
     "href": "/vite#framework-presets",
     "title": "@gleanql/vite",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Framework presets"
   },
   {
     "href": "/vite#generated-glue-thin-shims-over-typed-factories",
     "title": "@gleanql/vite",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Generated glue: thin shims over typed factories"
   },
   {
     "href": "/vite#build",
     "title": "@gleanql/vite",
-    "group": "Internals",
+    "group": "Packages",
     "heading": "Build"
   }
 ] as const;
