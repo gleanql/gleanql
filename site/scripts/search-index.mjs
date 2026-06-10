@@ -6,13 +6,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const contentDir = path.join(here, "..", "content");
+const contentDir = path.join(here, "..", "..", "docs");
 
 const slugifyHeading = (text) => text.toLowerCase().replace(/[^\w]+/g, "-").replace(/^-+|-+$/g, "");
 const plain = (md) => md.replace(/`([^`]*)`/g, "$1").replace(/[*_]/g, "").trim();
 
 const entries = [];
-for (const file of fs.readdirSync(contentDir).filter((f) => f.endsWith(".md")).sort()) {
+for (const file of fs.readdirSync(contentDir).filter((f) => f.endsWith(".md") && f !== "README.md").sort()) {
   const src = fs.readFileSync(path.join(contentDir, file), "utf8");
   const slug = file.replace(/\.md$/, "");
   const fm = /^---\n([\s\S]*?)\n---\n/.exec(src);

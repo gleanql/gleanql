@@ -1,5 +1,5 @@
 /**
- * Filesystem-driven content: every `docs/content/*.md` IS a page. Vite's glob
+ * Filesystem-driven content: every `docs/*.md` (repo root) IS a page. Vite's glob
  * import inlines them at build time (workerd has no runtime fs), frontmatter
  * carries the nav metadata, and the sidebar/routes/search derive from it —
  * adding a page is dropping a markdown file, nothing else.
@@ -22,7 +22,7 @@ export interface DocPage {
 
 const GROUP_ORDER = ["Guide", "Internals", "Reference"];
 
-const raw = import.meta.glob("../../content/*.md", { query: "?raw", import: "default", eager: true }) as Record<
+const raw = import.meta.glob("../../../docs/*.md", { query: "?raw", import: "default", eager: true }) as Record<
   string,
   string
 >;
@@ -48,6 +48,7 @@ function parse(path: string, source: string): DocPage {
 
 export const PAGES: readonly DocPage[] = Object.entries(raw)
   .map(([path, source]) => parse(path, source))
+  .filter((p) => p.slug !== "README") // the folder's GitHub landing page, not a doc
   .sort((a, b) => a.order - b.order);
 
 export const pageBySlug = (slug: string): DocPage | undefined => PAGES.find((p) => p.slug === slug);

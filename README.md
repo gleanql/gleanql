@@ -91,7 +91,7 @@ Server Components) and **React Router 7** (isomorphic SSR) today.
 pnpm install
 pnpm test        # ~400 tests, incl. golden fixtures through two type-checker engines
 pnpm typecheck
-pnpm docs        # the docs site (itself a RedwoodSDK app)
+pnpm docs        # the docs site (markdown in docs/, RedwoodSDK reader in site/)
 ```
 
 CI builds and typechecks every package, every example app, and runs a

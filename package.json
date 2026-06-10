@@ -10,7 +10,7 @@
     "typecheck": "tsc -p tsconfig.json",
     "build": "pnpm --filter \"./packages/*\" build",
     "example": "vitest run examples",
-    "docs": "pnpm --filter @gleanql/docs dev"
+    "docs": "pnpm --filter @gleanql/site dev"
   },
   "license": "MIT",
   "pnpm": {

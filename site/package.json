@@ -1,5 +1,5 @@
 {
-  "name": "@gleanql/docs",
+  "name": "@gleanql/site",
   "version": "0.0.0",
   "description": "The Glean docs site — a RedwoodSDK app (React Server Components on Cloudflare workerd)",
   "private": true,

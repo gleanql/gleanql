@@ -1,4 +1,4 @@
-// Generate docs/content/golden-cases.md FROM THE FIXTURES — the page can never
+// Generate docs/golden-cases.md FROM THE FIXTURES — the page can never
 // go stale again. Each fixture renders as: heading, the input file(s), the
 // expected operation/variables/read-map/diagnostics. Runs before dev/build.
 import fs from "node:fs";
@@ -65,5 +65,5 @@ ${sections.join("\n\n")}
 ${fixtures.length} fixtures. This page regenerates from the fixtures on every build.
 `;
 
-fs.writeFileSync(path.join(here, "..", "content", "golden-cases.md"), out);
-console.log(`golden-cases: ${fixtures.length} fixtures → content/golden-cases.md`);
+fs.writeFileSync(path.join(here, "..", "..", "docs", "golden-cases.md"), out);
+console.log(`golden-cases: ${fixtures.length} fixtures → docs/golden-cases.md`);
