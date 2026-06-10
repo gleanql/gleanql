@@ -1,5 +1,5 @@
 import { Marked, type Tokens } from "marked";
-import { highlight, type CodeLang } from "./highlight";
+import { esc, highlight, type CodeLang } from "./highlight";
 import { DocsLayout } from "./layout";
 import { pageBySlug } from "./content";
 
@@ -17,13 +17,11 @@ import { pageBySlug } from "./content";
  *    diagrams) live inline in the markdown and render in both places
  */
 
-export const slugify = (text: string): string =>
+const slugify = (text: string): string =>
   text
     .toLowerCase()
     .replace(/[^\w]+/g, "-")
     .replace(/^-+|-+$/g, "");
-
-const esc = (s: string): string => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 const ALERT_CLASS: Record<string, string> = { NOTE: "note", TIP: "ok", WARNING: "warn", CAUTION: "warn", IMPORTANT: "note" };
 
@@ -66,7 +64,7 @@ const md = new Marked({
   gfm: true,
 });
 
-export function renderMarkdown(source: string): string {
+function renderMarkdown(source: string): string {
   return md.parse(source, { async: false });
 }
 

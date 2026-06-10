@@ -278,7 +278,7 @@ article > pre, .flow {
 .tok-c, .c { color: var(--code-faint); font-style: italic; }
 .tok-n { color: var(--code-num); }
 
-/* ── callouts, pills, cards, tables ───────────────────────────────────── */
+/* ── callouts, cards, tables ───────────────────────────────────── */
 .note, .warn, .ok {
   margin: 18px 0; padding: 13px 16px 13px 44px;
   position: relative;
@@ -296,15 +296,6 @@ article > pre, .flow {
 .warn::before { content: "△"; color: var(--red); }
 .ok { border-left: 3px solid var(--green); }
 .ok::before { content: "✓"; color: var(--green); }
-
-.pill {
-  display: inline-block;
-  font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.06em;
-  padding: 2px 9px; border-radius: 99px;
-  background: var(--gold-wash); color: var(--gold);
-  border: 1px solid color-mix(in srgb, var(--gold) 30%, transparent);
-}
-.pill.gray { background: var(--bg-sunken); color: var(--ink-faint); border-color: var(--line); }
 
 .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 20px 0; }
 .card {
@@ -329,24 +320,6 @@ th {
 }
 td { padding: 9px 14px 9px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
 tr:last-child td { border-bottom: none; }
-
-/* golden-case blocks */
-.golden-case { border: 1px solid var(--line); border-radius: var(--radius); margin: 20px 0; background: var(--bg-raise); overflow: hidden; }
-.gc-head { display: flex; align-items: baseline; gap: 8px; padding: 11px 16px; border-bottom: 1px solid var(--line); font-weight: 650; flex-wrap: wrap; }
-.gc-body { padding: 4px 16px 14px; }
-.gc-label {
-  font-family: var(--font-mono); font-size: 10.5px;
-  letter-spacing: 0.12em; text-transform: uppercase;
-  color: var(--ink-faint); margin: 14px 0 6px;
-}
-.gc-body pre {
-  margin: 0; padding: 13px 15px;
-  border-radius: 8px;
-  background: var(--code-bg); color: var(--code-text);
-  border: 1px solid var(--code-line);
-  overflow-x: auto;
-  font-family: var(--font-mono); font-size: 12.5px; line-height: 1.6;
-}
 
 footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--ink-faint); font-size: 13px; }
 

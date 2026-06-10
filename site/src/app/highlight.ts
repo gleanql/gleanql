@@ -64,7 +64,8 @@ const RULES: Record<CodeLang, readonly Rule[]> = {
   text: [],
 };
 
-const esc = (s: string): string => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+/** HTML-escape text bound for a generated markup string (shared with the markdown renderer). */
+export const esc = (s: string): string => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 /** Highlight `source` into token-span HTML (pre-escaped, safe to inject). */
 export function highlight(source: string, lang: CodeLang): string {

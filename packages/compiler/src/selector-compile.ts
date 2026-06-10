@@ -194,16 +194,7 @@ function openRootCall(
   // A mutation/subscription root may return a scalar (`removeTodo(id): ID`,
   // `clearCompleted: Int`): emit it as a leaf field with no sub-selection, and there's
   // nothing further to chain off it.
-  const isLeaf = schema.isLeaf(def.type);
-  const key = canonicalArgs(argMap);
-  const field = rootSel.field(fieldName, key, () => ({
-    name: fieldName,
-    key,
-    args: argMap,
-    child: isLeaf ? undefined : new MutableSelection(def.type),
-  }));
-  if (isLeaf) return undefined;
-  return { typeName: def.type, sel: field.child!, isList: def.list ?? false };
+  return finishField(ctx, rootSel, def.type, fieldName, argMap, def.list);
 }
 
 /** Open a non-root field on a selector result value (builds selection only, no read-map). */
@@ -215,16 +206,32 @@ function openField(
 ): SelectorValue | undefined {
   const def = ctx.schema.getField(base.typeName, fieldName);
   if (!def) return undefined;
-  const isLeaf = ctx.schema.isLeaf(def.type);
+  return finishField(ctx, base.sel, def.type, fieldName, args, def.list);
+}
+
+/**
+ * The shared tail of opening any selector field: add it to the selection (leaf
+ * fields get no sub-selection) and return the value to keep chaining off — or
+ * `undefined` when the chain ends at a leaf.
+ */
+function finishField(
+  ctx: SelectorCompileContext,
+  sel: MutableSelection,
+  fieldType: string,
+  fieldName: string,
+  args: ArgMap | undefined,
+  list: boolean | undefined,
+): SelectorValue | undefined {
+  const isLeaf = ctx.schema.isLeaf(fieldType);
   const key = canonicalArgs(args);
-  const field = base.sel.field(fieldName, key, () => ({
+  const field = sel.field(fieldName, key, () => ({
     name: fieldName,
     key,
     ...(args ? { args } : {}),
-    child: isLeaf ? undefined : new MutableSelection(def.type),
+    child: isLeaf ? undefined : new MutableSelection(fieldType),
   }));
   if (isLeaf) return undefined;
-  return { typeName: def.type, sel: field.child!, isList: def.list ?? false };
+  return { typeName: fieldType, sel: field.child!, isList: list ?? false };
 }
 
 /**
