@@ -20,6 +20,7 @@
     "src"
   ],
   "publishConfig": {
+    "access": "public",
     "main": "./dist/index.mjs",
     "types": "./dist/index.d.mts",
     "exports": {
@@ -41,5 +42,19 @@
   "devDependencies": {
     "@types/react": "19.2.14",
     "react": "19.2.6"
-  }
+  },
+  "homepage": "https://gleanql.com",
+  "bugs": "https://github.com/gleanql/gleanql/issues",
+  "keywords": [
+    "graphql",
+    "graphql-client",
+    "react",
+    "normalized-cache",
+    "suspense",
+    "optimistic-updates"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "sideEffects": false
 }

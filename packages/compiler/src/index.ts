@@ -13,6 +13,9 @@ import {
   createBackend,
 } from "./backend.js";
 import "./ts-backend.js"; // side effect: registers the default "typescript" backend
+// NOTE: because of that side-effect import, this package must NOT declare
+// `"sideEffects": false` — vite bundles vite.config.ts with esbuild, which
+// would tree-shake the registration away ("Unknown compiler backend").
 import { analyzeFile, type AnalyzeResult } from "./analyzer.js";
 
 // The experimental tsgo engine. Statically safe to re-export: `@typescript/native-preview`

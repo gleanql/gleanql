@@ -20,6 +20,7 @@
     "src"
   ],
   "publishConfig": {
+    "access": "public",
     "main": "./dist/index.mjs",
     "types": "./dist/index.d.mts",
     "exports": {
@@ -34,5 +35,17 @@
   },
   "dependencies": {
     "@gleanql/core": "workspace:*"
-  }
+  },
+  "homepage": "https://gleanql.com",
+  "bugs": "https://github.com/gleanql/gleanql/issues",
+  "keywords": [
+    "graphql",
+    "codegen",
+    "typescript",
+    "introspection"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "sideEffects": false
 }

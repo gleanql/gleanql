@@ -20,6 +20,7 @@
     "src"
   ],
   "publishConfig": {
+    "access": "public",
     "main": "./dist/index.mjs",
     "types": "./dist/index.d.mts",
     "exports": {
@@ -31,5 +32,17 @@
   },
   "scripts": {
     "build": "tsdown src/index.ts --format esm --dts.eager"
-  }
+  },
+  "homepage": "https://gleanql.com",
+  "bugs": "https://github.com/gleanql/gleanql/issues",
+  "keywords": [
+    "graphql",
+    "query-ir",
+    "graphql-printer",
+    "selection-merging"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "sideEffects": false
 }

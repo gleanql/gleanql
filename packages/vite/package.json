@@ -35,5 +35,22 @@
     "@gleanql/compiler": "workspace:*",
     "@gleanql/core": "workspace:*",
     "tsdown": "^0.22.0"
+  },
+  "homepage": "https://gleanql.com",
+  "bugs": "https://github.com/gleanql/gleanql/issues",
+  "keywords": [
+    "graphql",
+    "vite-plugin",
+    "compiler",
+    "react",
+    "rsc",
+    "persisted-queries"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
   }
 }
