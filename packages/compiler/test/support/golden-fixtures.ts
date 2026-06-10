@@ -61,5 +61,8 @@ function loadFixture(dir: string, name: string): GoldenFixture | undefined {
 /** Read an `expected.*` file from a fixture dir, or undefined if absent. */
 export function readExpected(dir: string, file: string): string | undefined {
   const p = path.join(dir, file);
-  return fs.existsSync(p) ? fs.readFileSync(p, "utf8") : undefined;
+  // CRLF-normalize: goldens are asserted byte-for-byte against LF printer
+  // output, and a CRLF checkout (windows without our .gitattributes) must not
+  // turn every assertion into an invisible-\r mismatch.
+  return fs.existsSync(p) ? fs.readFileSync(p, "utf8").replace(/\r\n/g, "\n") : undefined;
 }

@@ -130,5 +130,5 @@ jobs:
 
       # Examples with a test script run it (rwsdk-real exercises the consumer
       # test harness end-to-end: jsdom + @gleanql/client/testing).
-      - run: pnpm test --if-present
+      - run: pnpm run --if-present test
         working-directory: ${{ matrix.dir }}

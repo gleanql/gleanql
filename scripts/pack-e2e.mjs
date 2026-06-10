@@ -20,7 +20,9 @@ const app = path.join(tmp, "app");
 fs.mkdirSync(tarballDir);
 fs.mkdirSync(path.join(app, "src"), { recursive: true });
 
-const run = (cmd, args, cwd) => execFileSync(cmd, args, { cwd, stdio: "pipe", encoding: "utf8" });
+// shell:true so "pnpm" resolves to pnpm.cmd on windows (execFile skips PATHEXT).
+const run = (cmd, args, cwd) =>
+  execFileSync(cmd, args, { cwd, stdio: "pipe", encoding: "utf8", shell: process.platform === "win32" });
 const fail = (msg) => {
   console.error(`✗ ${msg}`);
   process.exit(1);

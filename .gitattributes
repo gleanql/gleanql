@@ -1,0 +1,7 @@
+# LF everywhere: golden fixtures are asserted byte-for-byte, so a CRLF
+# checkout (windows runners/devs) must not leak \r into expected files or
+# fixture sources.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.gif binary
