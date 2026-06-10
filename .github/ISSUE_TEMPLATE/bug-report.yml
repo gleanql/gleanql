@@ -1,0 +1,35 @@
+name: Bug report
+description: Something compiled wrong, fetched wrong, or broke
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, what you got instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: >-
+        The fastest route to a fix is a failing input. For compiler issues: the
+        component + schema slice that miscompiles (the golden-fixture shape —
+        see /golden-cases on the docs site). For runtime issues: the read or
+        mutation and the cache state around it.
+      render: tsx
+  - type: textarea
+    id: operation
+    attributes:
+      label: What did the build compile?
+      description: >-
+        Open /__glean in dev and paste the operation (document + read map) for
+        the affected route, if relevant.
+  - type: input
+    id: version
+    attributes:
+      label: Versions
+      placeholder: "@gleanql/vite 0.1.0, RedwoodSDK 1.2, node 22, macOS"
+    validations:
+      required: true

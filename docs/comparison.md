@@ -79,5 +79,21 @@ There is a limit to be honest about. A fragment is a *guarantee*; static analysi
 Every claim above is executable in this repo:
 
 - The [golden cases](golden-cases.md) lock the compiler's coverage: 36 fixtures through two type-checker engines.
-- The runtime behaviors are unit-tested (380+ tests).
+- The runtime behaviors are unit-tested (400+ tests).
 - `examples/rwsdk-real`, `examples/rwsdk-todo` and `examples/remix-real` are bootable apps. They exercise RSC islands, optimistic TodoMVC membership, and isomorphic SSR respectively.
+
+### Numbers
+
+`pnpm bench` reproduces these. Measured on an M-series laptop, 2026-06:
+
+| What | Measured |
+| --- | --- |
+| Warm nested read (3 hops, fresh proxy chain) | ~734,000 ops/sec (~1.4 µs) |
+| One write + "which of 1,000 mounted components re-renders?" (field-grained digest sweep) | ~0.11 ms — exactly 1 wakes |
+| One route compiled end to end, *including* building its own `ts.Program` | ~107 ms |
+| Codegen for a 1,600-type schema (GitHub-scale) | ~30 ms |
+
+The per-route number is the worst case: the real build constructs **one**
+program and analyzes every route against it, so the marginal cost per route is
+far below the standalone figure. The 1,600-type figure comes from a stress
+test that runs in CI, so a scaling regression fails the build.

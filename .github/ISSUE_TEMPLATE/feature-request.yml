@@ -1,0 +1,24 @@
+name: Feature request
+description: A capability GleanQL should have
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you're trying to do that you currently can't (or can only do awkwardly).
+    validations:
+      required: true
+  - type: textarea
+    id: shape
+    attributes:
+      label: What would it look like?
+      description: >-
+        Sketch the API as app code. GleanQL's bar: no GraphQL documents in app
+        code, no schema conventions baked into the compiler — runtime
+        primitives over compiler magic.
+      render: tsx
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Workarounds you considered
