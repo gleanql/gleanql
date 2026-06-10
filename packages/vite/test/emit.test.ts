@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { buildSchema, introspectionFromSchema } from "graphql";
 import { generateSchemaModel, type IntrospectionSchema } from "@gleanql/codegen";
 import type { OperationArtifact } from "@gleanql/core";
-import { evalSchemaModel, genGeneratedJs, genOperationsJs, genIndexDts, genOperationsDts, genClientJs, genClientDts, genServerJs, genServerDts, genClientSpaJs, genClientSpaDts } from "../src/emit.js";
+import { evalSchemaModel, genGeneratedJs, genOperationsJs, genIndexDts, genOperationsDts, genClientJs, genClientDts, genServerJs, genServerDts, genClientSpaJs, genClientSpaDts, genTestingJs, genTestingDts } from "../src/emit.js";
 
 const SDL = /* GraphQL */ `
   type Query {
@@ -216,5 +216,20 @@ describe("genOperationsJs", () => {
     expect(data).toContain("variables: getProductRouteVariables");
     expect(data).toContain('export { schema } from "./schema-model.js"');
     expect(data).not.toContain("rwsdk/worker"); // client-safe: no request-scope import
+  });
+});
+
+describe("genTestingJs", () => {
+  it("bakes the schema into createTestGraph and re-exports the mocks", () => {
+    const js = genTestingJs();
+    expect(js).toContain('import { schema } from "./operations.js"');
+    expect(js).toContain("buildTestGraph({ schema, ...options })");
+    expect(js).toContain('export { createMockAdapter, mockGraphFetch } from "../src/testing.js"');
+  });
+
+  it("types createTestGraph's glean as the generated Graph", () => {
+    const dts = genTestingDts();
+    expect(dts).toContain('import type { Graph } from "../index.js"');
+    expect(dts).toContain("{ glean: Graph }");
   });
 });

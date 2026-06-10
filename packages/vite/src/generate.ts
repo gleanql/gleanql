@@ -21,6 +21,8 @@ import {
   genIndexDts,
   genOperationsDts,
   genPersistedManifest,
+  genTestingJs,
+  genTestingDts,
   renderReadMask,
 } from "./emit.js";
 import type { FrameworkPreset, GraphPluginOptions, SubpathExport } from "./types.js";
@@ -205,6 +207,8 @@ function subpathExports(preset: FrameworkPreset): Record<string, SubpathExport> 
     "./operations": { types: "./generated/operations.d.ts", default: "./generated/operations.js" },
     // Generated client glue (hydration + useGlean + refresh) — zero app boilerplate.
     "./client": { types: "./generated/client.d.ts", default: "./generated/client.js" },
+    // The test harness with the schema baked in (createTestGraph / mocks).
+    "./testing": { types: "./generated/testing.d.ts", default: "./generated/testing.js" },
     // Framework-specific extras (e.g. rwsdk's RSC `./server` glue).
     ...preset.extraExports?.(),
   };
@@ -351,6 +355,9 @@ function emitGenerated(args: {
   const client = preset.emitClientGlue(emitCtx);
   fs.writeFileSync(path.join(gen, "client.js"), client.js);
   fs.writeFileSync(path.join(gen, "client.d.ts"), client.dts);
+
+  fs.writeFileSync(path.join(gen, "testing.js"), genTestingJs());
+  fs.writeFileSync(path.join(gen, "testing.d.ts"), genTestingDts());
 
   const server = preset.emitServerGlue?.(emitCtx);
   if (server) {

@@ -1,7 +1,7 @@
 ---
 title: RedwoodSDK integration
 group: Integrations
-order: 11
+order: 12
 ---
 
 # RedwoodSDK integration

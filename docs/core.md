@@ -1,7 +1,7 @@
 ---
 title: @gleanql/core
 group: Packages
-order: 8
+order: 9
 ---
 
 # `@gleanql/core`

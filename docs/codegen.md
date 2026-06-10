@@ -1,7 +1,7 @@
 ---
 title: @gleanql/codegen
 group: Packages
-order: 10
+order: 11
 ---
 
 # `@gleanql/codegen`

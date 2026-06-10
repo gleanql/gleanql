@@ -1,7 +1,7 @@
 ---
 title: vs Relay & gqty
 group: Guide
-order: 4
+order: 5
 ---
 
 # GleanQL vs Relay vs gqty

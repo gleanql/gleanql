@@ -14,6 +14,8 @@ export { genGeneratedJs, genIndexDts } from "./emit/accessor.js";
 export {
   genClientJs,
   genClientDts,
+  genTestingJs,
+  genTestingDts,
   genServerJs,
   genServerDts,
   genClientSpaJs,

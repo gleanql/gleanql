@@ -1,7 +1,7 @@
 ---
 title: @gleanql/client
 group: Packages
-order: 6
+order: 7
 ---
 
 # `@gleanql/client` runtime

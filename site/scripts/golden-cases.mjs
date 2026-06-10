@@ -51,7 +51,7 @@ for (const name of fixtures) {
 const out = `---
 title: Golden cases
 group: Reference
-order: 13
+order: 14
 ---
 
 # Golden cases

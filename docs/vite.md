@@ -1,7 +1,7 @@
 ---
 title: @gleanql/vite
 group: Packages
-order: 7
+order: 8
 ---
 
 # `@gleanql/vite`

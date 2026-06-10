@@ -846,6 +846,47 @@ export default [
     "heading": "Status"
   },
   {
+    "href": "/testing",
+    "title": "Testing your app",
+    "group": "Guide"
+  },
+  {
+    "href": "/testing#server-components-call-them-with-a-test-graph",
+    "title": "Testing your app",
+    "group": "Guide",
+    "heading": "Server components: call them with a test graph"
+  },
+  {
+    "href": "/testing#islands-hydrate-the-real-client",
+    "title": "Testing your app",
+    "group": "Guide",
+    "heading": "Islands: hydrate the real client"
+  },
+  {
+    "href": "/testing#mutations-refetch-intercept-the-wire",
+    "title": "Testing your app",
+    "group": "Guide",
+    "heading": "Mutations & refetch: intercept the wire"
+  },
+  {
+    "href": "/testing#server-side-code-a-recording-adapter",
+    "title": "Testing your app",
+    "group": "Guide",
+    "heading": "Server-side code: a recording adapter"
+  },
+  {
+    "href": "/testing#what-you-re-actually-testing",
+    "title": "Testing your app",
+    "group": "Guide",
+    "heading": "What you're actually testing"
+  },
+  {
+    "href": "/testing#where-next",
+    "title": "Testing your app",
+    "group": "Guide",
+    "heading": "Where next"
+  },
+  {
     "href": "/usage",
     "title": "Using GleanQL",
     "group": "Guide"

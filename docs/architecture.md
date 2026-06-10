@@ -1,7 +1,7 @@
 ---
 title: Architecture & pipeline
 group: Guide
-order: 5
+order: 6
 ---
 
 # Architecture & pipeline

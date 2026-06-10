@@ -1,7 +1,7 @@
 ---
 title: React Router integration
 group: Integrations
-order: 12
+order: 13
 ---
 
 # React Router integration
