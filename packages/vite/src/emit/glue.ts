@@ -1,4 +1,5 @@
 import type { RequestScope } from "../types.js";
+import { generatedModule, generatedDts, obj, reexports, literal } from "./module.js";
 import { renderActiveResolverNullable } from "./resolver.js";
 
 // The generated framework "glue" entrypoints. Each is a THIN SHIM over a typed
@@ -7,21 +8,6 @@ import { renderActiveResolverNullable } from "./resolver.js";
 //   - genClientJs:    RSC client entry ("use client", private singleton).
 //   - genClientSpaJs: isomorphic client entry (shares the app's scope).
 //   - genServerJs:    RSC server entry (GraphHydrate + withGraphHydration).
-
-/** `, maxCacheRecords: N` fragment for the createGraphClient config (empty when unset). */
-function cacheCapArg(maxCacheRecords?: number): string {
-  return typeof maxCacheRecords === "number" ? `, maxCacheRecords: ${JSON.stringify(maxCacheRecords)}` : "";
-}
-
-/** `, persisted: true` fragment for the createGraphClient config (empty when off). */
-function persistedArg(persisted?: boolean): string {
-  return persisted ? ", persisted: true" : "";
-}
-
-/** `, gcKeepPages: N` fragment for the createGraphClient config (empty when unset). */
-function gcArg(gcKeepPages?: number): string {
-  return typeof gcKeepPages === "number" ? `, gcKeepPages: ${JSON.stringify(gcKeepPages)}` : "";
-}
 
 /** Which selector hooks the schema warrants emitting. */
 export interface HookCaps {
@@ -45,12 +31,66 @@ export interface ClientGlueOptions {
   readonly masking?: boolean;
 }
 
-/** JS re-exports for the selector hooks the schema warrants. */
-function hookExports(caps: HookCaps): string {
-  return (
-    (caps.mutation ? `\nexport const useMutation = __glean.useMutation;` : "") +
-    (caps.subscription ? `\nexport const useSubscription = __glean.useSubscription;` : "")
-  );
+const NO_HOOKS: HookCaps = { mutation: false, subscription: false };
+
+/** The client surface both flavours re-export (the first export differs: hydrator vs hydrate). */
+const CLIENT_EXPORTS = ["useGlean", "refresh", "runOperation", "onEvent", "appendToRoot", "removeFromRoot", "usePaginated"];
+
+/**
+ * The shared body of both client flavours: one `createGraphClient` call with the
+ * baked config, then the re-export list. Flavour differences are data — the
+ * directive, the scope import/entry, and the leading export.
+ */
+function clientModule(options: ClientGlueOptions, flavour: { directive?: string; scopeFrom?: string; lead: string }): string {
+  const { endpoint, maxCacheRecords, caps = NO_HOOKS, persisted, gcKeepPages, masking } = options;
+  const config = obj({
+    schema: true,
+    operations: true,
+    endpoint: literal(endpoint),
+    scope: flavour.scopeFrom !== undefined,
+    maxCacheRecords: literal(maxCacheRecords),
+    persisted: persisted && "true",
+    gcKeepPages: literal(gcKeepPages),
+    readMask: masking === true,
+  });
+  return generatedModule({
+    directive: flavour.directive,
+    imports: [
+      `import { createGraphClient } from "../src/glue-client.js";`,
+      `import { operations, schema${masking ? ", readMask" : ""} } from "./operations.js";`,
+      flavour.scopeFrom !== undefined && `import { scope } from ${JSON.stringify(flavour.scopeFrom)}; // the SHARED GraphScope`,
+    ],
+    body: [
+      `const __glean = createGraphClient(${config});`,
+      ...reexports("__glean", [
+        flavour.lead,
+        ...CLIENT_EXPORTS,
+        caps.mutation && "useMutation",
+        caps.subscription && "useSubscription",
+      ]),
+    ],
+  });
+}
+
+/** RSC client entry: a "use client" shim with NO scope — a private singleton runtime the auto-injected <GraphHydrator> feeds. */
+export function genClientJs(options: ClientGlueOptions): string {
+  return clientModule(options, { directive: `"use client";`, lead: "GraphHydrator" });
+}
+
+/**
+ * Isomorphic (non-RSC) client entry. NOT a `"use client"` module and owns NO
+ * private singleton: it passes the app's SHARED scope (the `requestScope` module)
+ * to the factory, so the isomorphic `graph` accessor and `useGlean()` resolve the
+ * same runtime per environment. The app drives hydration via `hydrate(payload)`.
+ * Requires `requestScope: { import, from }`; that module must export `scope`.
+ */
+export function genClientSpaJs(requestScope: RequestScope, options: ClientGlueOptions): string {
+  if (requestScope === "rwsdk") {
+    throw new Error(
+      'genClientSpaJs requires requestScope: { import, from } (a non-RSC framework cannot use the "rwsdk" scope).',
+    );
+  }
+  return clientModule(options, { scopeFrom: requestScope.from, lead: "hydrate" });
 }
 
 /**
@@ -60,39 +100,30 @@ function hookExports(caps: HookCaps): string {
  * an array of reads), while `TData` describes the operation's result shape — pass it
  * explicitly to type `data`/`onCompleted`.
  */
-function hookDts(caps: HookCaps): string {
-  const m = caps.mutation
-    ? `
-export declare function useMutation<TData = unknown, TVars = Record<string, unknown>>(
+function hookDts(caps: HookCaps): Array<string | false> {
+  return [
+    caps.mutation &&
+      `export declare function useMutation<TData = unknown, TVars = Record<string, unknown>>(
   selector: (m: Mutation, vars: TVars) => unknown,
   options?: UseMutationOptions<TData, TVars>,
-): UseMutationResult<TData, TVars>;`
-    : "";
-  const s = caps.subscription
-    ? `
-export declare function useSubscription<TData = unknown, TVars = Record<string, unknown>>(
+): UseMutationResult<TData, TVars>;`,
+    caps.subscription &&
+      `export declare function useSubscription<TData = unknown, TVars = Record<string, unknown>>(
   selector: (s: Subscription, vars: TVars) => unknown,
   options?: UseSubscriptionOptions<TData, TVars>,
-): SubscriptionState<TData>;`
-    : "";
-  return m + s;
+): SubscriptionState<TData>;`,
+  ];
 }
 
 /** The type imports the hook declarations need (option/result types + the root accessors). */
-function hookDtsImports(caps: HookCaps): string {
-  const lines: string[] = [];
-  if (caps.mutation) {
-    lines.push(`import type { UseMutationOptions, UseMutationResult } from "../src/glue-client.js";`);
-    lines.push(`import type { Mutation } from "../index.js";`);
-  }
-  if (caps.subscription) {
-    lines.push(`import type { UseSubscriptionOptions, SubscriptionState } from "../src/glue-client.js";`);
-    lines.push(`import type { Subscription } from "../index.js";`);
-  }
-  return lines.length ? `\n${lines.join("\n")}` : "";
+function hookDtsImports(caps: HookCaps): Array<string | false> {
+  return [
+    caps.mutation && `import type { UseMutationOptions, UseMutationResult } from "../src/glue-client.js";`,
+    caps.mutation && `import type { Mutation } from "../index.js";`,
+    caps.subscription && `import type { UseSubscriptionOptions, SubscriptionState } from "../src/glue-client.js";`,
+    caps.subscription && `import type { Subscription } from "../index.js";`,
+  ];
 }
-
-const NO_HOOKS: HookCaps = { mutation: false, subscription: false };
 
 /**
  * The `runOperation` declaration: typed by name through the generated
@@ -107,126 +138,35 @@ export declare function runOperation<K extends keyof GleanOperations>(name: K, v
 ${fallback}`;
 }
 
-/** RSC client entry: a "use client" shim with NO scope — a private singleton runtime the auto-injected <GraphHydrator> feeds. */
-export function genClientJs({ endpoint, maxCacheRecords, caps = NO_HOOKS, persisted, gcKeepPages, masking }: ClientGlueOptions): string {
-  return `// GENERATED by @gleanql/vite — do not edit.
-"use client";
-import { createGraphClient } from "../src/glue-client.js";
-import { operations, schema${masking ? ", readMask" : ""} } from "./operations.js";
-
-const __glean = createGraphClient({ schema, operations, endpoint: ${JSON.stringify(endpoint)}${cacheCapArg(maxCacheRecords)}${persistedArg(persisted)}${gcArg(gcKeepPages)}${masking ? ", readMask" : ""} });
-export const GraphHydrator = __glean.GraphHydrator;
-export const useGlean = __glean.useGlean;
-export const refresh = __glean.refresh;
-export const runOperation = __glean.runOperation;
-export const onEvent = __glean.onEvent;
-export const appendToRoot = __glean.appendToRoot;
-export const removeFromRoot = __glean.removeFromRoot;
-export const usePaginated = __glean.usePaginated;${hookExports(caps)}
-`;
+/** The declarations both client flavours share (everything but the hydration lead + useGlean nullability). */
+function clientDtsBody(caps: HookCaps, operationTypes?: string): Array<string | false> {
+  return [
+    `export declare function refresh(target?: string | { component: string }): Promise<void>;`,
+    runOperationDts(operationTypes),
+    `export declare function onEvent(listener: (event: import("../src/glue-client.js").GraphClientEvent) => void): () => void;`,
+    `export declare function appendToRoot(rootField: string, entity: unknown, options?: { prepend?: boolean; at?: number }): void;`,
+    `export declare function removeFromRoot(rootField: string, entity: unknown): void;`,
+    `export declare function usePaginated(connection: unknown, options?: UsePaginatedOptions): UsePaginatedResult;`,
+    ...hookDts(caps),
+  ];
 }
+
+const CLIENT_DTS_IMPORTS = [
+  `import type { GraphHydrationPayload } from "../src/index.js";`,
+  `import type { UsePaginatedOptions, UsePaginatedResult } from "../src/glue-client.js";`,
+  `import type { Graph } from "../index.js";`,
+];
 
 /** Types for the generated `@gleanql/client/client` (RSC) entrypoint. */
 export function genClientDts(caps: HookCaps = NO_HOOKS, operationTypes?: string): string {
-  return `// GENERATED — do not edit.
-import type { GraphHydrationPayload } from "../src/index.js";
-import type { UsePaginatedOptions, UsePaginatedResult } from "../src/glue-client.js";
-import type { Graph } from "../index.js";${hookDtsImports(caps)}
-export declare function GraphHydrator(props: { payload: GraphHydrationPayload }): null;
-export declare function useGlean(component?: string): Graph | undefined;
-export declare function refresh(target?: string | { component: string }): Promise<void>;
-${runOperationDts(operationTypes)}
-export declare function onEvent(listener: (event: import("../src/glue-client.js").GraphClientEvent) => void): () => void;
-export declare function appendToRoot(rootField: string, entity: unknown, options?: { prepend?: boolean; at?: number }): void;
-export declare function removeFromRoot(rootField: string, entity: unknown): void;
-export declare function usePaginated(connection: unknown, options?: UsePaginatedOptions): UsePaginatedResult;${hookDts(caps)}
-`;
-}
-
-/**
- * The `@gleanql/client/testing` entrypoint: the runtime's test harness with the
- * schema baked in — so a consumer test seeds a real graph from plain JSON
- * (`createTestGraph({ data })`) without touching schema plumbing.
- */
-export function genTestingJs(): string {
-  return `// GENERATED by @gleanql/vite — do not edit.
-import { schema } from "./operations.js";
-import { buildTestGraph } from "../src/testing.js";
-
-export const createTestGraph = (options) => buildTestGraph({ schema, ...options });
-export { createMockAdapter, mockGraphFetch } from "../src/testing.js";
-`;
-}
-
-/** Types for the generated `@gleanql/client/testing` entrypoint. */
-export function genTestingDts(): string {
-  return `// GENERATED — do not edit.
-import type { Graph } from "../index.js";
-import type { TestGraph, TestGraphOptions } from "../src/testing.js";
-export declare function createTestGraph(options: Omit<TestGraphOptions, "schema">): Omit<TestGraph, "glean"> & { glean: Graph };
-export { createMockAdapter, mockGraphFetch } from "../src/testing.js";
-export type { MockAdapter, MockAdapterCall, MockGraphFetch, MockResponder, TestGraph, TestGraphOptions } from "../src/testing.js";
-`;
-}
-
-/**
- * RSC server entry: a shim that hands the framework's active-graph resolver + the
- * client hydrator to the shared server factory. `GraphHydrate` serializes this
- * request's cache and renders the client `GraphHydrator` with it (the payload rides
- * the RSC flight stream); `withGraphHydration` is the auto-inject HOC.
- */
-export function genServerJs(requestScope: RequestScope = "rwsdk"): string {
-  return `// GENERATED by @gleanql/vite — do not edit.
-import { createGraphServer } from "../src/glue-server.js";
-import { GraphHydrator } from "./client.js";
-${renderActiveResolverNullable(requestScope)}
-
-const __glean = createGraphServer({ GraphHydrator, getActive: __activeOrNull });
-export const GraphHydrate = __glean.GraphHydrate;
-export const withGraphHydration = __glean.withGraphHydration;
-`;
-}
-
-/** Types for the generated `@gleanql/client/server` entrypoint. */
-export function genServerDts(): string {
-  return `// GENERATED — do not edit.
-import type { ComponentType } from "react";
-export declare function GraphHydrate(props?: { clientSafeContext?: readonly string[] }): unknown;
-export declare function withGraphHydration<P>(Page: ComponentType<P>): ComponentType<P>;
-`;
-}
-
-/**
- * Isomorphic (non-RSC) client entry. NOT a `"use client"` module and owns NO
- * private singleton: it passes the app's SHARED scope (the `requestScope` module)
- * to the factory, so the isomorphic `graph` accessor and `useGlean()` resolve the
- * same runtime per environment. The app drives hydration via `hydrate(payload)`.
- * Requires `requestScope: { import, from }`; that module must export `scope`.
- */
-export function genClientSpaJs(
-  requestScope: RequestScope,
-  { endpoint, maxCacheRecords, caps = NO_HOOKS, persisted, gcKeepPages, masking }: ClientGlueOptions,
-): string {
-  if (requestScope === "rwsdk") {
-    throw new Error(
-      'genClientSpaJs requires requestScope: { import, from } (a non-RSC framework cannot use the "rwsdk" scope).',
-    );
-  }
-  return `// GENERATED by @gleanql/vite — do not edit.
-import { createGraphClient } from "../src/glue-client.js";
-import { operations, schema${masking ? ", readMask" : ""} } from "./operations.js";
-import { scope } from ${JSON.stringify(requestScope.from)}; // the SHARED GraphScope
-
-const __glean = createGraphClient({ schema, operations, endpoint: ${JSON.stringify(endpoint)}, scope${cacheCapArg(maxCacheRecords)}${persistedArg(persisted)}${gcArg(gcKeepPages)}${masking ? ", readMask" : ""} });
-export const hydrate = __glean.hydrate;
-export const useGlean = __glean.useGlean;
-export const refresh = __glean.refresh;
-export const runOperation = __glean.runOperation;
-export const onEvent = __glean.onEvent;
-export const appendToRoot = __glean.appendToRoot;
-export const removeFromRoot = __glean.removeFromRoot;
-export const usePaginated = __glean.usePaginated;${hookExports(caps)}
-`;
+  return generatedDts({
+    imports: [...CLIENT_DTS_IMPORTS, ...hookDtsImports(caps)],
+    body: [
+      `export declare function GraphHydrator(props: { payload: GraphHydrationPayload }): null;`,
+      `export declare function useGlean(component?: string): Graph | undefined;`,
+      ...clientDtsBody(caps, operationTypes),
+    ],
+  });
 }
 
 /** Types for the SPA `@gleanql/client/client` entrypoint. */
@@ -236,17 +176,73 @@ export function genClientSpaDts(caps: HookCaps = NO_HOOKS, operationTypes?: stri
   // client (set at hydration before any component renders) — so reads never see an
   // empty graph. (The RSC entry keeps `| undefined`: a client island is rendered
   // server-side for the flight stream before any client runtime exists.)
-  return `// GENERATED — do not edit.
-import type { GraphHydrationPayload } from "../src/index.js";
-import type { UsePaginatedOptions, UsePaginatedResult } from "../src/glue-client.js";
-import type { Graph } from "../index.js";${hookDtsImports(caps)}
-export declare function hydrate(payload: GraphHydrationPayload | undefined): void;
-export declare function useGlean(component?: string): Graph;
-export declare function refresh(target?: string | { component: string }): Promise<void>;
-${runOperationDts(operationTypes)}
-export declare function onEvent(listener: (event: import("../src/glue-client.js").GraphClientEvent) => void): () => void;
-export declare function appendToRoot(rootField: string, entity: unknown, options?: { prepend?: boolean; at?: number }): void;
-export declare function removeFromRoot(rootField: string, entity: unknown): void;
-export declare function usePaginated(connection: unknown, options?: UsePaginatedOptions): UsePaginatedResult;${hookDts(caps)}
-`;
+  return generatedDts({
+    imports: [...CLIENT_DTS_IMPORTS, ...hookDtsImports(caps)],
+    body: [
+      `export declare function hydrate(payload: GraphHydrationPayload | undefined): void;`,
+      `export declare function useGlean(component?: string): Graph;`,
+      ...clientDtsBody(caps, operationTypes),
+    ],
+  });
+}
+
+/**
+ * The `@gleanql/client/testing` entrypoint: the runtime's test harness with the
+ * schema baked in — so a consumer test seeds a real graph from plain JSON
+ * (`createTestGraph({ data })`) without touching schema plumbing.
+ */
+export function genTestingJs(): string {
+  return generatedModule({
+    imports: [`import { schema } from "./operations.js";`, `import { buildTestGraph } from "../src/testing.js";`],
+    body: [
+      `export const createTestGraph = (options) => buildTestGraph({ schema, ...options });`,
+      `export { createMockAdapter, mockGraphFetch } from "../src/testing.js";`,
+    ],
+  });
+}
+
+/** Types for the generated `@gleanql/client/testing` entrypoint. */
+export function genTestingDts(): string {
+  return generatedDts({
+    imports: [
+      `import type { Graph } from "../index.js";`,
+      `import type { TestGraph, TestGraphOptions } from "../src/testing.js";`,
+    ],
+    body: [
+      `export declare function createTestGraph(options: Omit<TestGraphOptions, "schema">): Omit<TestGraph, "glean"> & { glean: Graph };`,
+      `export { createMockAdapter, mockGraphFetch } from "../src/testing.js";`,
+      `export type { MockAdapter, MockAdapterCall, MockGraphFetch, MockResponder, TestGraph, TestGraphOptions } from "../src/testing.js";`,
+    ],
+  });
+}
+
+/**
+ * RSC server entry: a shim that hands the framework's active-graph resolver + the
+ * client hydrator to the shared server factory. `GraphHydrate` serializes this
+ * request's cache and renders the client `GraphHydrator` with it (the payload rides
+ * the RSC flight stream); `withGraphHydration` is the auto-inject HOC.
+ */
+export function genServerJs(requestScope: RequestScope = "rwsdk"): string {
+  return generatedModule({
+    imports: [
+      `import { createGraphServer } from "../src/glue-server.js";`,
+      `import { GraphHydrator } from "./client.js";`,
+      renderActiveResolverNullable(requestScope),
+    ],
+    body: [
+      `const __glean = createGraphServer({ GraphHydrator, getActive: __activeOrNull });`,
+      ...reexports("__glean", ["GraphHydrate", "withGraphHydration"]),
+    ],
+  });
+}
+
+/** Types for the generated `@gleanql/client/server` entrypoint. */
+export function genServerDts(): string {
+  return generatedDts({
+    imports: [`import type { ComponentType } from "react";`],
+    body: [
+      `export declare function GraphHydrate(props?: { clientSafeContext?: readonly string[] }): unknown;`,
+      `export declare function withGraphHydration<P>(Page: ComponentType<P>): ComponentType<P>;`,
+    ],
+  });
 }
