@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.2 (2026-06-11)
 
 ### @gleanql/vite
 - Slim runtime schema: the generated `schema-model.js` now contains only the
