@@ -1,9 +1,10 @@
 name: Release (npm publish)
 
 # Manually triggered: publishes every @gleanql/* package at the version in its
-# package.json. Requires the NPM_TOKEN repository secret (an npm automation
-# token with publish rights to the gleanql org). pnpm rewrites workspace:*
-# dependency ranges to the real versions at publish time.
+# package.json. Auth is npm trusted publishing (OIDC) — no token secret; each
+# package on npmjs.com lists this repo + workflow as its trusted publisher.
+# pnpm rewrites workspace:* dependency ranges to the real versions at publish
+# time, and needs >=10.13 for the OIDC token exchange.
 on:
   workflow_dispatch:
     inputs:
@@ -16,6 +17,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -43,5 +45,3 @@ jobs:
       - run: pnpm build
 
       - run: pnpm -r --filter "./packages/*" publish --access public --tag ${{ inputs.tag }} --no-git-checks
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
