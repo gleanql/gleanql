@@ -93,7 +93,12 @@ function renderInputObject(type: IntrospectionType, ctx: Ctx): string {
   return `export interface ${type.name} {\n${members.join("\n")}\n}`;
 }
 
-/** A field is callable when it declares arguments; otherwise it is a property. */
+/**
+ * A field is callable when it declares arguments; otherwise it is a property.
+ * (The runtime proxy makes the same split — args-fields return a function.)
+ * The args object itself is optional when every argument is, so the common
+ * no-args call reads `image.url()` rather than `image.url({})`.
+ */
 function renderFieldMember(
   name: string,
   args: readonly IntrospectionInputValue[],
@@ -103,7 +108,8 @@ function renderFieldMember(
   const ret = renderTs(type, ctx.scalars);
   if (args.length > 0) {
     const argList = args.map((a) => renderInputMember(a, ctx)).join(" ");
-    return `${propKey(name)}(args: { ${argList} }): ${ret};`;
+    const allOptional = args.every((a) => a.type.kind !== "NON_NULL");
+    return `${propKey(name)}(args${allOptional ? "?" : ""}: { ${argList} }): ${ret};`;
   }
   return `${propKey(name)}: ${ret};`;
 }

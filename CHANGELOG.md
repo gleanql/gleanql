@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased
+
+### @gleanql/vite
+- Slim runtime schema: the generated `schema-model.js` now contains only the
+  types/fields reachable from the compiled operations — identity keys, proxy
+  navigation and `usePaginated` trails are all bounded by selections, so
+  behavior is identical while large schemas stay out of the app bundle
+  (Shopify Admin, ~3,000 types: ~1MB of schema source → a few KB; a real
+  worker bundle measured 2.45MB → 0.85MB). The build still compiles routes
+  against the full SDL in memory. There is no opt-out: reads outside the
+  compiled selections were never part of the contract (`masking` exists to
+  catch them), and `fetchMissing` continues to serve misses on selected
+  fields.
+
+### @gleanql/codegen
+- Optional-args ergonomics: when every argument of a field (or query root) is
+  optional, the generated signature takes an optional args object —
+  `glean.productsCount()` and `image.url()` instead of demanding `({})`. This
+  matches the runtime proxy, which already returns a callable for any field
+  with declared arguments.
+
 ## 0.1.1 (2026-06-11)
 
 - Releases now publish via npm trusted publishing (OIDC) with provenance

@@ -128,7 +128,10 @@ describe("generateTypes", () => {
   });
 
   it("renders callable fields (field arguments) as methods", () => {
-    expect(types).toContain(`url(args: { transform?: ImageTransformInput | null; }): string;`);
+    // All-optional arguments → optional args object: `image.url()` works.
+    expect(types).toContain(`url(args?: { transform?: ImageTransformInput | null; }): string;`);
+    // A required argument keeps the args object required.
+    expect(types).toContain(`product(args: { handle: string; }): Product | null;`);
   });
 
   it("renders enums and unions", () => {

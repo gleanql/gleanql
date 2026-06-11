@@ -37,8 +37,10 @@ function rootAccessor(
   const sigs = fields.map((f) => {
     collectNamed(f.type, named);
     f.args.forEach((a) => collectNamed(a.type, named));
+    // The args object is optional when every argument is — `glean.productsCount()`.
+    const allOptional = f.args.every((a) => a.type.kind !== "NON_NULL");
     const args = f.args.length
-      ? `args: { ${f.args.map((a) => `${a.name}${a.type.kind === "NON_NULL" ? "" : "?"}: ${renderTs(a.type)}`).join("; ")} }`
+      ? `args${allOptional ? "?" : ""}: { ${f.args.map((a) => `${a.name}${a.type.kind === "NON_NULL" ? "" : "?"}: ${renderTs(a.type)}`).join("; ")} }`
       : "";
     // Roots are non-null in app code: the route interruptor 404s when a root is null.
     return `  ${f.name}(${args}): ${renderTsInner(f.type)};`;

@@ -14,6 +14,7 @@ import {
 import type { OperationArtifact, SchemaModel } from "@gleanql/core";
 import { emitDeclarations, listTsx, provisionPackage, readAppPaths, resolveRuntimeSources, transpileDir } from "./provision.js";
 import { addRegisteredOperations, loadRegisteredOperations } from "./registered.js";
+import { renderSlimSchemaModelJs, slimRuntimeSchema } from "./slim-schema.js";
 import {
   evalSchemaModel,
   genGeneratedJs,
@@ -344,6 +345,16 @@ function emitGenerated(args: {
     gcKeepPages: options.gcKeepPages,
     masking: options.masking,
   };
+  // The skeleton wrote the FULL schema model (step 3) so the package resolves
+  // during compilation; now that the operations are known, replace it with the
+  // runtime-reachable subset. Everything the runtime asks the schema —
+  // identity keys, proxy navigation, `usePaginated` trails — is bounded by
+  // the compiled selections, so the full model never needs to ship.
+  fs.writeFileSync(
+    path.join(gen, "schema-model.js"),
+    renderSlimSchemaModelJs(slimRuntimeSchema(schema, operations)),
+  );
+
   const readMask = options.masking ? renderReadMask(operations, schema) : undefined;
   fs.writeFileSync(path.join(gen, "operations.js"), genOperationsJs(operations, readMask));
   fs.writeFileSync(path.join(gen, "operations.d.ts"), genOperationsDts(options.masking));

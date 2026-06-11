@@ -64,7 +64,13 @@ export function generateGraph(schema: IntrospectionSchema, options: GenerateGrap
 
 function renderRoot(field: IntrospectionField, scalars: Record<string, string>): string {
   const ret = renderTs(field.type, scalars);
-  const params = field.args.length > 0 ? `args: { ${field.args.map((a) => renderArg(a.name, a.type, scalars)).join(" ")} }` : "";
+  // The args object is optional when every argument is — `glean.productsCount()`
+  // should not demand an empty `{}`.
+  const allOptional = field.args.every((a) => a.type.kind !== "NON_NULL");
+  const params =
+    field.args.length > 0
+      ? `args${allOptional ? "?" : ""}: { ${field.args.map((a) => renderArg(a.name, a.type, scalars)).join(" ")} }`
+      : "";
   return [
     `${propKey(field.name)}(${params}): ${ret} {`,
     `  return undefined as unknown as ${ret};`,
