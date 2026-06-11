@@ -1,6 +1,11 @@
 # Changelog
 
-## 0.1.0 (unreleased)
+## 0.1.1 (2026-06-11)
+
+- Releases now publish via npm trusted publishing (OIDC) with provenance
+  attestations — no long-lived token in CI. No library changes.
+
+## 0.1.0 (2026-06-11)
 
 The first public cut of GleanQL — a TypeScript-native GraphQL query compiler:
 plain components in, compiled/persisted operations + a normalized reactive
