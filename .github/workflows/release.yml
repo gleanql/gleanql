@@ -31,11 +31,16 @@ jobs:
 
       - uses: pnpm/action-setup@v4
 
+      # No registry-url here: it writes a placeholder _authToken to .npmrc,
+      # which preempts the OIDC exchange. The npm that ships with node 22 is
+      # too old for trusted publishing (needs >=11.5.1), so upgrade it —
+      # pnpm shells out to `npm publish` for the actual upload.
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
-          registry-url: "https://registry.npmjs.org"
+
+      - run: npm install -g npm@^11
 
       - run: pnpm install --frozen-lockfile
 
