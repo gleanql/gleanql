@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.3 (2026-06-13)
 
 ### @gleanql/vite
 - Dev-time operation changes now hot-swap under the rwsdk preset — no more
