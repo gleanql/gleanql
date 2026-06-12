@@ -85,6 +85,17 @@ export interface FrameworkPreset {
    * `config()`, which re-keys the optimizer and rebuilds a coherent bundle.
    */
   operationsDigest?(operations: Record<string, OperationArtifact>): string;
+  /**
+   * Generated modules (paths relative to the generated package root) whose
+   * content changes whenever `operationsDigest` changes. When present, a
+   * digest change is applied by invalidating exactly these modules in every
+   * environment plus a full browser reload — true hot-swap, no dev-server
+   * restart. Valid only when every prebundle-bound reference to them uses a
+   * bare specifier on the optimizer's exclude list (relative imports get
+   * inlined into the frozen prebundle and would keep serving stale data).
+   * Without this field, a digest change falls back to a server restart.
+   */
+  readonly volatileModules?: readonly string[];
 }
 
 /** Built-in preset name or a custom preset object. Defaults to `"rwsdk"`. */
@@ -168,6 +179,15 @@ export interface GraphPluginContext {
 }
 
 /** The slice of Vite's `Plugin` contract we implement (kept structural to avoid a vite dependency). */
+/** The slice of a Vite module graph we use (structural — no vite dep). */
+export interface GraphModuleGraph {
+  invalidateAll(): void;
+  /** Look up the module nodes a file backs (vite keys by absolute path, no query). */
+  getModulesByFile?(file: string): Set<object> | undefined;
+  /** Invalidate one module; vite propagates through its importer chain. */
+  invalidateModule?(mod: object): void;
+}
+
 /** The slice of Vite's dev server we use in `configureServer` (structural — no vite dep). */
 export interface GraphDevServer {
   readonly middlewares: {
@@ -187,9 +207,9 @@ export interface GraphDevServer {
   /** Hot channel to the browser — a full reload after operations change. */
   readonly ws?: { send(payload: { type: "full-reload" }): void };
   /** Vite 6 environment API (rwsdk runs client + worker environments). */
-  readonly environments?: Record<string, { readonly moduleGraph?: { invalidateAll(): void } }>;
+  readonly environments?: Record<string, { readonly moduleGraph?: GraphModuleGraph }>;
   /** Pre-environment fallback module graph. */
-  readonly moduleGraph?: { invalidateAll(): void };
+  readonly moduleGraph?: GraphModuleGraph;
   /**
    * Restart the dev server. Used instead of invalidation when a preset's
    * `operationsDigest` changes — the only way to refresh a digest-keyed

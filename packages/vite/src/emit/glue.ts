@@ -57,6 +57,14 @@ function clientModule(options: ClientGlueOptions, flavour: { directive?: string;
     directive: flavour.directive,
     imports: [
       `import { createGraphClient } from "../src/glue-client.js";`,
+      // Deliberately relative — this copy of the data may go stale mid-session
+      // and that is fine: the glue only feeds snapshot-driven hydration (the
+      // server serializes per-request data into GraphHydrator props) and
+      // browser-initiated wire calls, which servers tolerate across operation
+      // generations. A bare self-reference here would break rwsdk's directive
+      // scan / vendor-barrel resolution ("No module found ... in module
+      // lookup"); the live data path is the server-side accessor module,
+      // which DOES use the bare excluded specifier.
       `import { operations, schema${masking ? ", readMask" : ""} } from "./operations.js";`,
       flavour.scopeFrom !== undefined && `import { scope } from ${JSON.stringify(flavour.scopeFrom)}; // the SHARED GraphScope`,
     ],

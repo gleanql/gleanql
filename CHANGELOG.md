@@ -3,17 +3,24 @@
 ## Unreleased
 
 ### @gleanql/vite
-- Dev-time operations changes now restart the dev server under the rwsdk
-  preset instead of invalidating module graphs. The preset keys the dep
-  optimizer's cache on the operations digest, so the prebundle is frozen per
-  server lifetime — `invalidateAll()` re-evaluated source modules against the
-  stale prebundle and split the worker into mixed module generations ("graph
-  not preloaded", "Request context not found", "Currently React only supports
-  one RSC renderer"). New `FrameworkPreset.operationsDigest` hook: when the
-  digest is unchanged the watcher now does nothing (text-only edits keep
-  plain HMR — no more full reload per save); when it changes the server
-  restarts before any request can render against the mismatch. Presets
-  without the hook keep the previous invalidate + full-reload behavior.
+- Dev-time operation changes now hot-swap under the rwsdk preset — no more
+  broken worker, no dev-server restart. Previously the watcher's
+  `invalidateAll()` re-evaluated source modules against the digest-keyed
+  prebundle (frozen per server lifetime), splitting the worker into mixed
+  module generations ("graph not preloaded", "Request context not found",
+  "Currently React only supports one RSC renderer"). Two new
+  `FrameworkPreset` hooks: `operationsDigest` — when a regeneration leaves
+  the digest unchanged the watcher does nothing at all (text-only edits keep
+  plain HMR; no more full reload per save) — and `volatileModules` — when the
+  digest changes, exactly these generated data modules are invalidated in
+  every environment plus a browser reload. The volatile data
+  (`@gleanql/client/operations` + the slim schema model it re-exports) is
+  kept OUT of the prebundle via `optimizeDeps.exclude`, so frameworks must
+  import it from a source (non-prebundled) module to see live data; the
+  prebundled main entry and client glue keep harmless frozen copies (the
+  accessor is request-graph-driven and hydration is snapshot-driven). Falls
+  back to a server restart on servers without per-module invalidation, and
+  to the previous invalidate + full-reload for presets without the hooks.
 
 ## 0.1.2 (2026-06-11)
 

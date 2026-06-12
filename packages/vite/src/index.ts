@@ -20,13 +20,41 @@ import { resolvePreset } from "./presets/index.js";
 import { bindComponentRefresh } from "./refresh-bind.js";
 import { bindSelectorHookOps } from "./mutation-bind.js";
 import { bindUseGleanComponent } from "./useglean-bind.js";
-import type { GraphPluginOptions, GraphVitePlugin, GraphViteConfigPatch } from "./types.js";
+import type { GraphPluginOptions, GraphVitePlugin, GraphViteConfigPatch, GraphDevServer, GraphModuleGraph } from "./types.js";
 
 export type { GraphPluginOptions, GraphVitePlugin, GraphViteConfigPatch, FrameworkPreset, FrameworkOption } from "./types.js";
 export { rwsdk, reactRouter } from "./presets/index.js";
 export { renderDevtoolsHtml } from "./devtools.js";
 // The pipeline itself — for programmatic builds and the standalone-consumption e2e.
 export { generate, type GenerateResult } from "./generate.js";
+
+/**
+ * Invalidate the preset's volatile generated modules (compiled operations +
+ * slim schema model) in every environment's module graph. Returns false when
+ * the server is too old to expose per-module invalidation — callers fall back
+ * to a restart. The modules are served as source (their bare specifier is on
+ * the optimizer's exclude list), so invalidation reaches the running worker on
+ * its next request via vite's pull-based module renegotiation; vite propagates
+ * the invalidation through each importer chain, which also re-evaluates
+ * factory-time consumers (e.g. a persisted-operations resolver built from the
+ * operations map).
+ */
+function invalidateVolatileModules(server: GraphDevServer, appRoot: string, modules: readonly string[]): boolean {
+  const graphs = [...Object.values(server.environments ?? {}).map((env) => env.moduleGraph), server.moduleGraph].filter(
+    (g): g is GraphModuleGraph => typeof g?.getModulesByFile === "function" && typeof g.invalidateModule === "function",
+  );
+  if (graphs.length === 0) return false;
+  // generate.ts materializes the package at this fixed location.
+  const pkgRoot = path.resolve(appRoot, "node_modules", "@gleanql", "client");
+  for (const rel of modules) {
+    const file = path.resolve(pkgRoot, rel);
+    for (const graph of graphs) {
+      const mods = graph.getModulesByFile?.(file);
+      if (mods) for (const mod of mods) graph.invalidateModule?.(mod);
+    }
+  }
+  return true;
+}
 
 export function glean(options: GraphPluginOptions): GraphVitePlugin {
   const preset = resolvePreset(options.framework);
@@ -94,11 +122,18 @@ export function glean(options: GraphPluginOptions): GraphVitePlugin {
             // Fingerprinting preset: the digest decides everything. Unchanged ⇒
             // the generated package is byte-identical, vite's own HMR covers the
             // edit — invalidating here would only churn (and, against a digest-
-            // keyed prebundle, churn is destructive). Changed ⇒ the prebundle is
-            // now stale and NO invalidation can refresh it; restart before any
-            // request renders against the mismatch.
+            // keyed prebundle, churn is destructive). Changed ⇒ hot-swap the
+            // volatile data modules when the preset declares them (they live
+            // outside the prebundle, served as source, so targeted invalidation
+            // takes effect on the next request); otherwise restart — the
+            // prebundle is frozen and no invalidation can refresh it.
             if (next === opsFingerprint) return;
             opsFingerprint = next;
+            if (preset.volatileModules?.length && invalidateVolatileModules(server, appRoot, preset.volatileModules)) {
+              console.log("[glean] operations changed — hot-swapped the compiled operations (no restart)");
+              server.ws?.send({ type: "full-reload" });
+              return;
+            }
             if (server.restart) {
               console.log("[glean] operations changed — restarting the dev server to re-key the optimizer cache");
               void server.restart();

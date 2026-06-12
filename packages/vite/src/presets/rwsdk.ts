@@ -23,13 +23,25 @@ export function rwsdk(): FrameworkPreset {
     // value changes when any operation changes, which changes the optimizer
     // hash and forces a re-prebundle — same ops, warm cache.
     viteConfigPatch: (operations) => ({
-      optimizeDeps: { esbuildOptions: { define: { __GLEANQL_OPS_DIGEST__: JSON.stringify(opsDigest(operations)) } } },
+      optimizeDeps: {
+        // The volatile data module stays OUT of the prebundle: generated code
+        // reaches it through this exact bare specifier, the optimizer
+        // externalizes it (exclude entries become esbuild externals), and the
+        // module is served as plain source — invalidatable mid-session. The
+        // digest define remains as a belt-and-braces re-key across restarts
+        // for anything that still inlines a copy (e.g. rwsdk's client vendor
+        // barrel, where staleness is tolerated — hydration is snapshot-driven).
+        exclude: ["@gleanql/client/operations"],
+        esbuildOptions: { define: { __GLEANQL_OPS_DIGEST__: JSON.stringify(opsDigest(operations)) } },
+      },
     }),
-    // The other half of the digest keying: a mid-session operations change can
-    // only take effect through a server restart (config() re-runs, the define
-    // above changes, the optimizer re-prebundles). Invalidating module graphs
-    // against the frozen prebundle instead splits the worker isolate.
     operationsDigest: opsDigest,
+    // When the digest changes, invalidating exactly these served-as-source
+    // modules (paths relative to the generated package) hot-swaps the
+    // operations without a dev-server restart. schema-model.js is reached
+    // relatively from operations.js, so it is its own module node and must be
+    // invalidated alongside — the slim schema changes with the selections.
+    volatileModules: ["generated/operations.js", "generated/schema-model.js"],
     emitClientGlue: (ctx) => {
       const caps = { mutation: !!ctx.schemaModel.mutationType, subscription: !!ctx.schemaModel.subscriptionType };
       const opts = {

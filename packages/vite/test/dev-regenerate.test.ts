@@ -15,9 +15,23 @@ import { generate, regenerate } from "../src/generate.js";
 const ops = (hash: string) => ({ Products: { hash } }) as never;
 const result = (hash: string) => ({ routeComponents: new Map(), operations: ops(hash), diagnostics: [] });
 
-function makeServer(withRestart = true) {
+function makeServer({ withRestart = true, withModuleLookup = false } = {}) {
   const handlers: Record<string, (file: string) => void> = {};
   const invalidateAll = vi.fn();
+  const invalidateModule = vi.fn();
+  const lookedUp: string[] = [];
+  const moduleGraph = {
+    invalidateAll,
+    ...(withModuleLookup
+      ? {
+          getModulesByFile: (file: string) => {
+            lookedUp.push(file);
+            return new Set([{ file }]);
+          },
+          invalidateModule,
+        }
+      : {}),
+  };
   const server = {
     middlewares: { use: vi.fn() },
     watcher: {
@@ -27,16 +41,16 @@ function makeServer(withRestart = true) {
       },
     },
     ws: { send: vi.fn() },
-    environments: { worker: { moduleGraph: { invalidateAll } } },
-    moduleGraph: { invalidateAll },
+    environments: { worker: { moduleGraph } },
+    moduleGraph,
     ...(withRestart ? { restart: vi.fn() } : {}),
   };
-  return { server: server as unknown as GraphDevServer, handlers, invalidateAll };
+  return { server: server as unknown as GraphDevServer, handlers, invalidateAll, invalidateModule, lookedUp };
 }
 
 // A minimal preset; `operationsDigest` reads the single op's hash so tests
 // control the fingerprint through the mocked regenerate result.
-function preset(withDigest: boolean): FrameworkPreset {
+function preset(withDigest: boolean, volatileModules?: readonly string[]): FrameworkPreset {
   return {
     name: "test",
     appDir: "src",
@@ -45,22 +59,23 @@ function preset(withDigest: boolean): FrameworkPreset {
     ...(withDigest
       ? { operationsDigest: (operations: Record<string, { hash?: string }>) => operations.Products?.hash ?? "" }
       : {}),
+    ...(volatileModules ? { volatileModules } : {}),
   };
 }
 
-async function boot(p: FrameworkPreset, withRestart = true) {
+async function boot(p: FrameworkPreset, serverOptions: Parameters<typeof makeServer>[0] = {}) {
   vi.mocked(generate).mockResolvedValue(result("h1"));
   const plugin = glean({ schema: "schema.graphql", framework: p });
   await plugin.config();
-  const { server, handlers, invalidateAll } = makeServer(withRestart);
-  plugin.configureServer(server);
+  const made = makeServer(serverOptions);
+  plugin.configureServer(made.server);
   const edit = async (hash: string) => {
     vi.mocked(regenerate).mockResolvedValue(result(hash));
-    handlers.change!(path.join(process.cwd(), "src", "page.tsx"));
+    made.handlers.change!(path.join(process.cwd(), "src", "page.tsx"));
     // 100ms debounce + the async rerun
     await new Promise((r) => setTimeout(r, 200));
   };
-  return { server, edit, invalidateAll };
+  return { ...made, edit };
 }
 
 beforeEach(() => vi.clearAllMocks());
@@ -93,11 +108,45 @@ describe("dev-time regeneration with a fingerprinting preset", () => {
 
   it("falls back to invalidation + full reload when the server cannot restart", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const { server, edit, invalidateAll } = await boot(preset(true), false);
+    const { server, edit, invalidateAll } = await boot(preset(true), { withRestart: false });
     await edit("h2");
     expect(invalidateAll).toHaveBeenCalled();
     expect(server.ws?.send).toHaveBeenCalledWith({ type: "full-reload" });
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("cannot restart"));
+  });
+});
+
+describe("dev-time regeneration with volatile modules (true hot-swap)", () => {
+  const VOLATILE = ["generated/operations.js", "generated/schema-model.js"];
+  const pkgRoot = path.resolve(process.cwd(), "node_modules", "@gleanql", "client");
+
+  it("hot-swaps on digest change: invalidates exactly the volatile modules, reloads, never restarts", async () => {
+    const { server, edit, invalidateAll, invalidateModule, lookedUp } = await boot(preset(true, VOLATILE), {
+      withModuleLookup: true,
+    });
+    await edit("h2");
+    expect((server as { restart?: ReturnType<typeof vi.fn> }).restart).not.toHaveBeenCalled();
+    expect(invalidateAll).not.toHaveBeenCalled();
+    // both volatile files looked up in both graphs (worker env + fallback)
+    for (const rel of VOLATILE) {
+      expect(lookedUp.filter((f) => f === path.resolve(pkgRoot, rel))).toHaveLength(2);
+    }
+    expect(invalidateModule).toHaveBeenCalledTimes(VOLATILE.length * 2);
+    expect(server.ws?.send).toHaveBeenCalledWith({ type: "full-reload" });
+  });
+
+  it("still does nothing when the digest is unchanged", async () => {
+    const { server, edit, invalidateModule } = await boot(preset(true, VOLATILE), { withModuleLookup: true });
+    await edit("h1");
+    expect(invalidateModule).not.toHaveBeenCalled();
+    expect(server.ws?.send).not.toHaveBeenCalled();
+  });
+
+  it("falls back to restart when the server lacks per-module invalidation", async () => {
+    const { server, edit, invalidateAll } = await boot(preset(true, VOLATILE), { withModuleLookup: false });
+    await edit("h2");
+    expect((server as { restart?: ReturnType<typeof vi.fn> }).restart).toHaveBeenCalledTimes(1);
+    expect(invalidateAll).not.toHaveBeenCalled();
   });
 });
 
@@ -121,5 +170,12 @@ describe("rwsdk preset wiring", () => {
     expect(patch.optimizeDeps?.esbuildOptions?.define?.__GLEANQL_OPS_DIGEST__).toBe(JSON.stringify(digest));
     // a different hash must move the fingerprint
     expect(p.operationsDigest!(ops("abd"))).not.toBe(digest);
+  });
+
+  it("declares the volatile modules and excludes their bare specifier from the optimizer", async () => {
+    const { rwsdk } = await vi.importActual<typeof import("../src/presets/index.js")>("../src/presets/index.js");
+    const p = rwsdk();
+    expect(p.volatileModules).toEqual(["generated/operations.js", "generated/schema-model.js"]);
+    expect(p.viteConfigPatch!(ops("abc")).optimizeDeps?.exclude).toContain("@gleanql/client/operations");
   });
 });
