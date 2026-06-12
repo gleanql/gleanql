@@ -18,9 +18,15 @@
   kept OUT of the prebundle via `optimizeDeps.exclude`, so frameworks must
   import it from a source (non-prebundled) module to see live data; the
   prebundled main entry and client glue keep harmless frozen copies (the
-  accessor is request-graph-driven and hydration is snapshot-driven). Falls
-  back to a server restart on servers without per-module invalidation, and
-  to the previous invalidate + full-reload for presets without the hooks.
+  accessor is request-graph-driven and hydration is snapshot-driven). With
+  the preset's `hotUpdateEvent` (rwsdk: `"rsc:update"`) the swap converges
+  IN PLACE — the client refetches the RSC payload and React reconciles, no
+  page reload at all; the event is re-sent once after the compile window
+  because the in-process compile blocks the event loop long enough for HMR
+  sockets to drop and reconnect. Falls back to a full reload without the
+  event, to a server restart on servers without per-module invalidation,
+  and to the previous invalidate + full-reload for presets without the
+  hooks.
 
 ## 0.1.2 (2026-06-11)
 

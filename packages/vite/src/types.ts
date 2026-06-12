@@ -96,6 +96,14 @@ export interface FrameworkPreset {
    * Without this field, a digest change falls back to a server restart.
    */
   readonly volatileModules?: readonly string[];
+  /**
+   * Custom HMR event to send after a volatile-module hot-swap instead of a
+   * full browser reload. For frameworks whose client runtime can re-render in
+   * place (rwsdk: `"rsc:update"` — the client refetches the RSC payload and
+   * React reconciles), this makes an operation change visually identical to
+   * any other hot update. Omit ⇒ full reload after the swap.
+   */
+  readonly hotUpdateEvent?: string;
 }
 
 /** Built-in preset name or a custom preset object. Defaults to `"rwsdk"`. */
@@ -204,8 +212,8 @@ export interface GraphDevServer {
     add(path: string): void;
     on(event: "change" | "add" | "unlink", handler: (file: string) => void): void;
   };
-  /** Hot channel to the browser — a full reload after operations change. */
-  readonly ws?: { send(payload: { type: "full-reload" }): void };
+  /** Hot channel to the browser — full reload or a framework custom event after operations change. */
+  readonly ws?: { send(payload: { type: "full-reload" } | { type: "custom"; event: string }): void };
   /** Vite 6 environment API (rwsdk runs client + worker environments). */
   readonly environments?: Record<string, { readonly moduleGraph?: GraphModuleGraph }>;
   /** Pre-environment fallback module graph. */

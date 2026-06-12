@@ -42,6 +42,10 @@ export function rwsdk(): FrameworkPreset {
     // relatively from operations.js, so it is its own module node and must be
     // invalidated alongside — the slim schema changes with the selections.
     volatileModules: ["generated/operations.js", "generated/schema-model.js"],
+    // After the swap, rwsdk's client runtime re-renders in place from a fresh
+    // RSC payload — same event its own HMR path uses for server-component
+    // edits, so an operation change looks like any other hot update.
+    hotUpdateEvent: "rsc:update",
     emitClientGlue: (ctx) => {
       const caps = { mutation: !!ctx.schemaModel.mutationType, subscription: !!ctx.schemaModel.subscriptionType };
       const opts = {

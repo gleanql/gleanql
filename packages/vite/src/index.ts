@@ -130,8 +130,21 @@ export function glean(options: GraphPluginOptions): GraphVitePlugin {
             if (next === opsFingerprint) return;
             opsFingerprint = next;
             if (preset.volatileModules?.length && invalidateVolatileModules(server, appRoot, preset.volatileModules)) {
-              console.log("[glean] operations changed — hot-swapped the compiled operations (no restart)");
-              server.ws?.send({ type: "full-reload" });
+              if (preset.hotUpdateEvent) {
+                console.log(`[glean] operations changed — hot-swapped in place (${preset.hotUpdateEvent})`);
+                // The in-process compile that just finished blocked the event
+                // loop for seconds, so the browser's HMR socket often missed
+                // heartbeats and is reconnecting RIGHT NOW — an event sent
+                // only once tends to land in that gap and vanish. Send now
+                // for still-connected clients and again after the reconnect
+                // window; a duplicate is a no-op refetch.
+                const notify = () => server.ws?.send({ type: "custom", event: preset.hotUpdateEvent! });
+                notify();
+                setTimeout(notify, 1500);
+              } else {
+                console.log("[glean] operations changed — hot-swapped the compiled operations (no restart)");
+                server.ws?.send({ type: "full-reload" });
+              }
               return;
             }
             if (server.restart) {

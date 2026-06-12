@@ -50,7 +50,7 @@ function makeServer({ withRestart = true, withModuleLookup = false } = {}) {
 
 // A minimal preset; `operationsDigest` reads the single op's hash so tests
 // control the fingerprint through the mocked regenerate result.
-function preset(withDigest: boolean, volatileModules?: readonly string[]): FrameworkPreset {
+function preset(withDigest: boolean, volatileModules?: readonly string[], hotUpdateEvent?: string): FrameworkPreset {
   return {
     name: "test",
     appDir: "src",
@@ -60,6 +60,7 @@ function preset(withDigest: boolean, volatileModules?: readonly string[]): Frame
       ? { operationsDigest: (operations: Record<string, { hash?: string }>) => operations.Products?.hash ?? "" }
       : {}),
     ...(volatileModules ? { volatileModules } : {}),
+    ...(hotUpdateEvent ? { hotUpdateEvent } : {}),
   };
 }
 
@@ -142,6 +143,17 @@ describe("dev-time regeneration with volatile modules (true hot-swap)", () => {
     expect(server.ws?.send).not.toHaveBeenCalled();
   });
 
+  it("sends the preset's custom hot-update event instead of a full reload when declared", async () => {
+    const { server, edit, invalidateModule } = await boot(preset(true, VOLATILE, "rsc:update"), {
+      withModuleLookup: true,
+    });
+    await edit("h2");
+    expect(invalidateModule).toHaveBeenCalled();
+    expect(server.ws?.send).toHaveBeenCalledWith({ type: "custom", event: "rsc:update" });
+    expect(server.ws?.send).not.toHaveBeenCalledWith({ type: "full-reload" });
+    expect((server as { restart?: ReturnType<typeof vi.fn> }).restart).not.toHaveBeenCalled();
+  });
+
   it("falls back to restart when the server lacks per-module invalidation", async () => {
     const { server, edit, invalidateAll } = await boot(preset(true, VOLATILE), { withModuleLookup: false });
     await edit("h2");
@@ -177,5 +189,6 @@ describe("rwsdk preset wiring", () => {
     const p = rwsdk();
     expect(p.volatileModules).toEqual(["generated/operations.js", "generated/schema-model.js"]);
     expect(p.viteConfigPatch!(ops("abc")).optimizeDeps?.exclude).toContain("@gleanql/client/operations");
+    expect(p.hotUpdateEvent).toBe("rsc:update");
   });
 });
