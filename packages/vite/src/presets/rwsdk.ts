@@ -25,6 +25,11 @@ export function rwsdk(): FrameworkPreset {
     viteConfigPatch: (operations) => ({
       optimizeDeps: { esbuildOptions: { define: { __GLEANQL_OPS_DIGEST__: JSON.stringify(opsDigest(operations)) } } },
     }),
+    // The other half of the digest keying: a mid-session operations change can
+    // only take effect through a server restart (config() re-runs, the define
+    // above changes, the optimizer re-prebundles). Invalidating module graphs
+    // against the frozen prebundle instead splits the worker isolate.
+    operationsDigest: opsDigest,
     emitClientGlue: (ctx) => {
       const caps = { mutation: !!ctx.schemaModel.mutationType, subscription: !!ctx.schemaModel.subscriptionType };
       const opts = {

@@ -71,6 +71,20 @@ export interface FrameworkPreset {
    * prebundle serves outdated operations across sessions).
    */
   viteConfigPatch?(operations: Record<string, OperationArtifact>): GraphViteConfigPatch;
+  /**
+   * A stable fingerprint of the compiled operations. Providing this changes
+   * dev-time regeneration semantics: when the fingerprint is UNCHANGED the
+   * plugin skips module-graph invalidation entirely (the generated package is
+   * byte-identical — vite's own HMR covers the edit), and when it CHANGES the
+   * plugin restarts the dev server instead of invalidating. Presets that key
+   * the dep optimizer's cache on this digest (rwsdk) need the restart: their
+   * prebundle is frozen per server lifetime, so `invalidateAll()` re-evaluates
+   * source modules against a stale prebundle and splits the worker into mixed
+   * module generations ("graph not preloaded", "Request context not found",
+   * "Currently React only supports one RSC renderer"). A restart re-runs
+   * `config()`, which re-keys the optimizer and rebuilds a coherent bundle.
+   */
+  operationsDigest?(operations: Record<string, OperationArtifact>): string;
 }
 
 /** Built-in preset name or a custom preset object. Defaults to `"rwsdk"`. */
@@ -176,6 +190,12 @@ export interface GraphDevServer {
   readonly environments?: Record<string, { readonly moduleGraph?: { invalidateAll(): void } }>;
   /** Pre-environment fallback module graph. */
   readonly moduleGraph?: { invalidateAll(): void };
+  /**
+   * Restart the dev server. Used instead of invalidation when a preset's
+   * `operationsDigest` changes — the only way to refresh a digest-keyed
+   * prebundle. Vite restarts in-process: same port, watchers re-arm.
+   */
+  restart?(): void | Promise<void>;
 }
 
 /** The vite-config patch the plugin contributes (merged by vite). Mutable

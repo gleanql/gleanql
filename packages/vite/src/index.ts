@@ -58,10 +58,13 @@ export function glean(options: GraphPluginOptions): GraphVitePlugin {
 
       // Dev-time regeneration: editing a route's reads must recompile its
       // operation NOW, not on the next server restart — otherwise new reads
-      // silently resolve undefined against a stale operation. Watch the inputs,
-      // re-run everything after provisioning, invalidate every module graph
-      // (the generated modules live in node_modules, which vite won't invalidate
-      // on its own), and reload — the page's data shape changed.
+      // silently resolve undefined against a stale operation. Watch the inputs
+      // and re-run everything after provisioning. What happens next depends on
+      // the preset: with `operationsDigest` (rwsdk) a real operations change
+      // restarts the server (the digest-keyed prebundle can't be refreshed any
+      // other way) and a no-op change does nothing; without it, invalidate
+      // every module graph (the generated modules live in node_modules, which
+      // vite won't invalidate on its own) and reload.
       const appRoot = process.cwd();
       const appDir = path.resolve(appRoot, preset.appDir) + path.sep;
       const schemaFile = path.resolve(appRoot, options.schema);
@@ -77,6 +80,7 @@ export function glean(options: GraphPluginOptions): GraphVitePlugin {
       let timer: ReturnType<typeof setTimeout> | undefined;
       let running = false;
       let queued = false;
+      let opsFingerprint = preset.operationsDigest?.(generated.operations);
       const rerun = async (): Promise<void> => {
         if (running) {
           queued = true;
@@ -85,6 +89,25 @@ export function glean(options: GraphPluginOptions): GraphVitePlugin {
         running = true;
         try {
           generated = await regenerate(appRoot, options, preset);
+          const next = preset.operationsDigest?.(generated.operations);
+          if (next !== undefined) {
+            // Fingerprinting preset: the digest decides everything. Unchanged ⇒
+            // the generated package is byte-identical, vite's own HMR covers the
+            // edit — invalidating here would only churn (and, against a digest-
+            // keyed prebundle, churn is destructive). Changed ⇒ the prebundle is
+            // now stale and NO invalidation can refresh it; restart before any
+            // request renders against the mismatch.
+            if (next === opsFingerprint) return;
+            opsFingerprint = next;
+            if (server.restart) {
+              console.log("[glean] operations changed — restarting the dev server to re-key the optimizer cache");
+              void server.restart();
+              return;
+            }
+            console.warn(
+              "[glean] operations changed but this server cannot restart — falling back to module-graph invalidation; the dep optimizer's prebundle may now be stale",
+            );
+          }
           for (const env of Object.values(server.environments ?? {})) env.moduleGraph?.invalidateAll();
           server.moduleGraph?.invalidateAll();
           server.ws?.send({ type: "full-reload" });

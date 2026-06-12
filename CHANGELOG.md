@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### @gleanql/vite
+- Dev-time operations changes now restart the dev server under the rwsdk
+  preset instead of invalidating module graphs. The preset keys the dep
+  optimizer's cache on the operations digest, so the prebundle is frozen per
+  server lifetime — `invalidateAll()` re-evaluated source modules against the
+  stale prebundle and split the worker into mixed module generations ("graph
+  not preloaded", "Request context not found", "Currently React only supports
+  one RSC renderer"). New `FrameworkPreset.operationsDigest` hook: when the
+  digest is unchanged the watcher now does nothing (text-only edits keep
+  plain HMR — no more full reload per save); when it changes the server
+  restarts before any request can render against the mismatch. Presets
+  without the hook keep the previous invalidate + full-reload behavior.
+
 ## 0.1.2 (2026-06-11)
 
 ### @gleanql/vite
