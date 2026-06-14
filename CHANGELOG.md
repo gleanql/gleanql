@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.4 (2026-06-14)
+
+### @gleanql/vite
+- New `clientFrom` plugin option: name a host package (a meta-framework) that
+  transitively provides `@gleanql/client`, and the runtime is provisioned by
+  resolving the client/core SOURCE through that host instead of from the app's
+  manifest. Lets a framework re-export the `glean` accessor
+  (`import { glean } from '@your-framework'`) so consuming apps declare zero
+  `@gleanql/*` packages. Accessor discovery is unchanged — it keys off the
+  `glean` identifier name, not the import specifier — so same-name re-exports
+  compile with no other configuration.
+
 ## 0.1.3 (2026-06-13)
 
 ### @gleanql/vite

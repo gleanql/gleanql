@@ -1,6 +1,6 @@
 {
   "name": "@gleanql/vite",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Glean's Vite plugin: provisions the runtime, runs codegen and compiles route reads to GraphQL operations",
   "license": "MIT",
   "author": "Alexander Liljengard",
