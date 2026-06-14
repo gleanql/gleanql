@@ -6,7 +6,7 @@ order: 8
 
 # `@gleanql/vite`
 
-This package is the build plugin, and the only build wiring an app needs. It generates the schema-specific runtime into the `@gleanql/client` package the app installs. That runtime is the `glean` accessor, the branded types, and the compiled operations. App code therefore imports everything from `@gleanql/client`.
+This package is the build plugin, and the only build wiring an app needs. It generates the schema-specific runtime into the `@gleanql/client` package the app installs. That runtime is the `glean` accessor, the branded types, and the compiled operations. App code imports everything from `@gleanql/client` — or, when a host meta-framework re-exports it, from that framework (see [Re-exporting from a host framework](#re-exporting-from-a-host-framework)).
 
 ## Usage
 
@@ -47,6 +47,7 @@ As a result, `import { glean } from "@gleanql/client"` resolves by ordinary node
 | `routes?` | auto-discover | explicit route file list (relative to the app root) to override discovery. |
 | `endpoint?` | `"/graphql"` | URL the generated client POSTs to for client-side refetch. |
 | `framework?` | `"rwsdk"` | framework binding — a built-in name or a custom `FrameworkPreset`. |
+| `clientFrom?` | — | host package that transitively provides `@gleanql/client` (a meta-framework that re-exports the `glean` accessor). When set, the runtime source is provisioned by resolving `@gleanql/client`/`@gleanql/core` **through that host** instead of the app's manifest — so consuming apps declare zero `@gleanql/*` packages. See [Re-exporting from a host framework](#re-exporting-from-a-host-framework). |
 | `backend?` | `"typescript"` | type engine used to compile routes (see below). |
 | `maxCacheRecords?` | unbounded | LRU cap on the long-lived client cache. Opt-in: enable it only with a real `fetchMissing`, because an evicted record re-read otherwise resolves to `undefined`. |
 | `strict?` | `false` | fail the build on any compiler diagnostic (unsupported pattern). When off, diagnostics are logged as warnings. |
@@ -117,6 +118,33 @@ The two built-ins:
 - **React Router 7 (`"react-router"`).** This preset is isomorphic, not RSC. Its client glue is *not* `"use client"` and shares the app's scope, with no private singleton. There is no server glue and no route transform. The accessor points at the app's universal scope module (`requestScope: { import: "activeGraph", from }`).
 
 The `requestScope` is the only seam `@gleanql/client` itself cares about. It is otherwise framework agnostic. For the custom form, `@gleanql/client` ships a `GraphScope` the accessor resolves from. On the server, a server-only module attaches an `AsyncLocalStorage` via `GraphScope.attachAls(als)` to isolate concurrent requests. The client uses the same scope as a singleton.
+
+## Re-exporting from a host framework
+
+A meta-framework that wraps GleanQL can own the `@gleanql/client` dependency and re-export the `glean` accessor, so an app it scaffolds declares **zero** `@gleanql/*` packages — it imports `glean` from the framework.
+
+Two things make this work, neither of which needs the accessor renamed:
+
+1. **Discovery is by identifier, not import path.** The compiler discovers route files and binds `glean.<field>(…)` calls by the local name `glean` — it does not match the import specifier. So `import { glean } from "@your-framework"` is discovered and compiled exactly like `import { glean } from "@gleanql/client"`, as long as the binding stays named `glean`.
+
+2. **`clientFrom` resolves the runtime source through the host.** Provisioning normally reads `@gleanql/client`'s shipped `src/` from the app's manifest. Set `clientFrom` to the host package and it resolves the client (and its `@gleanql/core`) **transitively through the host** — the same Node-resolution route already used for `@gleanql/core`. The generated runtime is still written app-locally to `node_modules/@gleanql/client`; only the source location changes.
+
+```tsx
+// inside the host framework's own Vite wiring
+glean({ schema, clientFrom: "@your-framework" })
+```
+
+The host then re-exports the accessor for runtime AND types:
+
+```ts
+// @your-framework entry — keep @gleanql/client external in your bundler so
+// the bare re-export is emitted verbatim; the app's build resolves it to the
+// per-app GENERATED @gleanql/client, carrying both the runtime accessor and
+// its schema-specific types.
+export { glean } from "@gleanql/client";
+```
+
+Because `@gleanql/client` is the per-app generated package (it only exists with the app's schema at the app's build), keep it `external` in the host's bundler and use your bundler's dedupe to resolve every `@gleanql/client` import — the host's re-export, the app's pages, the generated glue — to the one app-local copy.
 
 ## Generated glue: thin shims over typed factories
 

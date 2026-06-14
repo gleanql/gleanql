@@ -74,7 +74,7 @@ The vite plugin emits these into `@gleanql/client/client` as thin shims over `cr
 | Export | Kind | Summary |
 | --- | --- | --- |
 | `glean({ schema, routes, requestScope? })` | fn | the vite plugin: generates the schema into `@gleanql/client` |
-| `GraphPluginOptions` | type | `{ schema; routes?; endpoint?; framework?; backend?; maxCacheRecords?; strict?; persisted?; gcKeepPages?; operations? }` |
+| `GraphPluginOptions` | type | `{ schema; routes?; endpoint?; framework?; clientFrom?; backend?; maxCacheRecords?; strict?; persisted?; gcKeepPages?; operations? }` |
 | `renderDevtoolsHtml(operations, diagnostics)` | fn | the `/__glean` dev overlay page (served automatically by the plugin in dev) |
 | `RequestScope` | type | `"rwsdk" \| { import; from }` — how the accessor finds the active runtime |
 
