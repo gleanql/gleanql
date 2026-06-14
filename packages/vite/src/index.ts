@@ -14,7 +14,7 @@
 // this package by tsdown; graphql / typescript / esbuild are kept external and
 // resolved from the app at runtime.
 import path from "node:path";
-import { generate, regenerate, type GenerateResult } from "./generate.js";
+import { generate, regenerate, createDevCache, type GenerateResult, type DevCache } from "./generate.js";
 import { renderDevtoolsHtml } from "./devtools.js";
 import { resolvePreset } from "./presets/index.js";
 import { bindComponentRefresh } from "./refresh-bind.js";
@@ -60,6 +60,11 @@ export function glean(options: GraphPluginOptions): GraphVitePlugin {
   const preset = resolvePreset(options.framework);
   let done = false;
   let generated: GenerateResult = { routeComponents: new Map(), operations: {}, diagnostics: [] };
+  // Dev-only caches (codegen + incremental TS program) shared across every
+  // watcher-driven regeneration, so an edit re-checks only the changed file.
+  // Created lazily in configureServer (dev); production `config()` builds never
+  // touch it, so every build there is clean and from scratch.
+  let devCache: DevCache | undefined;
   return {
     name: "graph",
     enforce: "pre",
@@ -94,6 +99,7 @@ export function glean(options: GraphPluginOptions): GraphVitePlugin {
       // every module graph (the generated modules live in node_modules, which
       // vite won't invalidate on its own) and reload.
       const appRoot = process.cwd();
+      devCache ??= createDevCache();
       const appDir = path.resolve(appRoot, preset.appDir) + path.sep;
       const schemaFile = path.resolve(appRoot, options.schema);
       const operationsFile = options.operations ? path.resolve(appRoot, options.operations) : undefined;
@@ -116,7 +122,7 @@ export function glean(options: GraphPluginOptions): GraphVitePlugin {
         }
         running = true;
         try {
-          generated = await regenerate(appRoot, options, preset);
+          generated = await regenerate(appRoot, options, preset, devCache);
           const next = preset.operationsDigest?.(generated.operations);
           if (next !== undefined) {
             // Fingerprinting preset: the digest decides everything. Unchanged ⇒

@@ -6,10 +6,12 @@ import { generateGraph, generateSchemaModel, generateTypes, type IntrospectionSc
 import {
   analyzeFile,
   createBackend,
+  createBackendSession,
   createTsgoBackend,
   type AstFacade,
   type BackendOptions,
   type GraphCompilerBackend,
+  type TsBackendSession,
 } from "@gleanql/compiler";
 import type { OperationArtifact, SchemaModel } from "@gleanql/core";
 import { emitDeclarations, listTsx, provisionPackage, readAppPaths, resolveRuntimeSources, transpileDir } from "./provision.js";
@@ -94,6 +96,24 @@ export interface GenerateResult {
   readonly diagnostics: readonly string[];
 }
 
+/**
+ * Dev-only caches that persist across regenerations to make HMR fast. Create one
+ * per dev server (`createDevCache()`) and pass it to every `regenerate` call.
+ * Two caches, the two dominant costs (measured ~250ms + ~800ms on the Shopify
+ * Admin schema): the codegen result (the SDL is static within a session) and the
+ * type-engine's incremental program (a single-file edit re-checks only that file
+ * and its dependents instead of rebuilding the whole program). Omit the cache
+ * (production builds) and every regeneration is a clean, from-scratch build.
+ */
+export interface DevCache {
+  codegen?: { sdl: string; result: Codegen };
+  readonly backendSession: TsBackendSession;
+}
+
+export function createDevCache(): DevCache {
+  return { backendSession: createBackendSession() };
+}
+
 export async function generate(
   appRoot: string,
   options: GraphPluginOptions,
@@ -113,16 +133,17 @@ export async function regenerate(
   appRoot: string,
   options: GraphPluginOptions,
   preset: FrameworkPreset = resolvePreset(options.framework),
+  cache?: DevCache,
 ): Promise<GenerateResult> {
   const out = path.join(appRoot, "node_modules", CLIENT);
   const gen = path.join(out, "generated");
   const support = path.join(out, "_support"); // stub graph.ts + branded schema.ts for the compiler
 
-  const cg = runCodegen(appRoot, options.schema);
+  const cg = runCodegen(appRoot, options.schema, cache);
   await writePackageSkeleton({ out, gen, support, cg, preset });
 
   const discovery = discoverFiles(appRoot, preset, options, cg.schemaModel);
-  const analyzed = await analyzeOperations({ discovery, support, schema: cg.schemaModel, options, appRoot });
+  const analyzed = await analyzeOperations({ discovery, support, schema: cg.schemaModel, options, appRoot, cache });
 
   // Registered (hand-built) operations join the same map — generated module,
   // persisted manifest/allowlist and devtools treat them like compiled ones.
@@ -149,17 +170,22 @@ async function provisionRuntime(appRoot: string, out: string, clientFrom?: strin
 }
 
 /** 2. Codegen from the SDL → branded types, the schema model (source + evaluated), the graph stub. */
-function runCodegen(appRoot: string, schemaPath: string): Codegen {
+function runCodegen(appRoot: string, schemaPath: string, cache?: DevCache): Codegen {
   const sdl = fs.readFileSync(path.join(appRoot, schemaPath), "utf8");
+  // The SDL is static within a dev session — route edits never touch it. Reuse
+  // the (expensive on large schemas) codegen output when the SDL is byte-identical.
+  if (cache?.codegen && cache.codegen.sdl === sdl) return cache.codegen.result;
   const introspection = introspectionFromSchema(buildSchema(sdl)).__schema as unknown as IntrospectionSchema;
   const schemaModelSrc = generateSchemaModel(introspection);
-  return {
+  const result: Codegen = {
     introspection,
     typesSrc: generateTypes(introspection),
     schemaModelSrc,
     graphStubSrc: generateGraph(introspection),
     schemaModel: evalSchemaModel(schemaModelSrc),
   };
+  if (cache) cache.codegen = { sdl, result };
+  return result;
 }
 
 /**
@@ -259,14 +285,19 @@ async function analyzeOperations(args: {
   schema: SchemaModel;
   options: GraphPluginOptions;
   appRoot: string;
+  cache?: DevCache;
 }): Promise<GenerateResult> {
-  const { discovery, support, schema, options, appRoot } = args;
-  const { backend, ast } = await selectBackend(options.backend, {
-    fileNames: [...discovery.allFiles],
-    supportDir: support,
-    paths: discovery.appPaths?.paths,
-    baseUrl: discovery.appPaths?.baseUrl,
-  });
+  const { discovery, support, schema, options, appRoot, cache } = args;
+  const { backend, ast } = await selectBackend(
+    options.backend,
+    {
+      fileNames: [...discovery.allFiles],
+      supportDir: support,
+      paths: discovery.appPaths?.paths,
+      baseUrl: discovery.appPaths?.baseUrl,
+    },
+    cache?.backendSession,
+  );
 
   const operations: Record<string, OperationArtifact> = {};
   const routeComponents: RouteComponents = new Map();
@@ -301,15 +332,17 @@ async function analyzeOperations(args: {
 async function selectBackend(
   kind: GraphPluginOptions["backend"],
   backendOpts: BackendOptions,
+  session?: TsBackendSession,
 ): Promise<{ backend: GraphCompilerBackend; ast?: AstFacade }> {
   if (kind === "tsgo") {
     try {
+      // tsgo runs its own process; it doesn't share the in-process incremental session.
       return await createTsgoBackend(backendOpts);
     } catch (err) {
       console.warn(`@gleanql/vite: tsgo backend unavailable, falling back to "typescript" — ${(err as Error).message}`);
     }
   }
-  return { backend: createBackend("typescript", backendOpts) };
+  return { backend: createBackend("typescript", backendOpts, session) };
 }
 
 /**

@@ -57,8 +57,19 @@ export interface BackendOptions {
   readonly baseUrl?: string;
 }
 
-/** Constructs a backend over the given inputs. */
-export type GraphCompilerBackendFactory = (options: BackendOptions) => GraphCompilerBackend;
+/**
+ * An opaque, engine-specific incremental-build session (e.g. the TS backend's
+ * cached program + SourceFiles). Created once per dev server and passed to every
+ * `createBackend` call so the engine can reuse work across regenerations. The
+ * core stays engine-agnostic — it only holds and forwards the handle.
+ */
+export type BackendSession = unknown;
+
+/** Constructs a backend over the given inputs, optionally reusing a {@link BackendSession}. */
+export type GraphCompilerBackendFactory = (
+  options: BackendOptions,
+  session?: BackendSession,
+) => GraphCompilerBackend;
 
 const registry = new Map<string, GraphCompilerBackendFactory>();
 
@@ -77,12 +88,16 @@ export function listBackends(): readonly string[] {
 }
 
 /** Construct a backend by name. Throws if the name was never registered. */
-export function createBackend(name: string, options: BackendOptions): GraphCompilerBackend {
+export function createBackend(
+  name: string,
+  options: BackendOptions,
+  session?: BackendSession,
+): GraphCompilerBackend {
   const factory = registry.get(name);
   if (!factory) {
     throw new Error(
       `Unknown compiler backend "${name}". Registered: ${listBackends().join(", ") || "(none)"}.`,
     );
   }
-  return factory(options);
+  return factory(options, session);
 }

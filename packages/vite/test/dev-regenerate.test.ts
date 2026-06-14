@@ -9,6 +9,7 @@ import type { FrameworkPreset, GraphDevServer } from "../src/types.js";
 vi.mock("../src/generate.js", () => ({
   generate: vi.fn(),
   regenerate: vi.fn(),
+  createDevCache: () => ({ backendSession: { sourceFiles: new Map() } }),
 }));
 import { generate, regenerate } from "../src/generate.js";
 

@@ -1,6 +1,58 @@
 import ts from "typescript";
+import fs from "node:fs";
 import path from "node:path";
 import { type BackendOptions, type GraphCompilerBackend, registerBackend } from "./backend.js";
+
+/**
+ * Dev-mode incremental session. Holds a SourceFile cache (keyed on path + mtime)
+ * and the previous `ts.Program`, so a re-analysis after a single-file edit reuses
+ * every unchanged SourceFile — including the multi-megabyte lib.*.d.ts files and
+ * the static schema support modules — and re-binds/re-checks only the edited
+ * route and its dependents. Without this, every keystroke-driven regenerate
+ * rebuilds the whole program from scratch (the dominant HMR cost).
+ *
+ * Lifetime = the dev server. Reset (drop the program + cache) when the set of
+ * root files or compiler options changes materially.
+ */
+export interface TsBackendSession {
+  sourceFiles: Map<string, { version: string; file: ts.SourceFile }>;
+  lastProgram?: ts.Program;
+  signature?: string;
+}
+
+export function createBackendSession(): TsBackendSession {
+  return { sourceFiles: new Map() };
+}
+
+function fileVersion(fileName: string): string {
+  try {
+    return String(fs.statSync(fileName).mtimeMs);
+  } catch {
+    return "0";
+  }
+}
+
+/**
+ * A CompilerHost that serves SourceFiles from the session cache when the file's
+ * mtime is unchanged (reference-equal, so `oldProgram` reuse kicks in), and
+ * re-parses + re-caches only changed files.
+ */
+function cachingHost(options: ts.CompilerOptions, session: TsBackendSession): ts.CompilerHost {
+  const base = ts.createCompilerHost(options, /* setParentNodes */ true);
+  const baseGetSourceFile = base.getSourceFile.bind(base);
+  base.getSourceFile = (fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile) => {
+    const version = fileVersion(fileName);
+    const cached = session.sourceFiles.get(fileName);
+    if (cached && cached.version === version && !shouldCreateNewSourceFile) {
+      return cached.file;
+    }
+    const file = baseGetSourceFile(fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile);
+    if (file) session.sourceFiles.set(fileName, { version, file });
+    else session.sourceFiles.delete(fileName);
+    return file;
+  };
+  return base;
+}
 
 /** Copy caller paths into the mutable `string[]` shape `ts.CompilerOptions` wants. */
 function mutablePaths(
@@ -29,7 +81,7 @@ export class TsBackend implements GraphCompilerBackend {
   private readonly program: ts.Program;
   private readonly checker: ts.TypeChecker;
 
-  constructor(options: TsBackendOptions) {
+  constructor(options: TsBackendOptions, session?: TsBackendSession) {
     const compilerOptions: ts.CompilerOptions = {
       target: ts.ScriptTarget.ES2022,
       module: ts.ModuleKind.ESNext,
@@ -52,7 +104,21 @@ export class TsBackend implements GraphCompilerBackend {
       path.join(options.supportDir, "graph.ts"),
       path.join(options.supportDir, "schema.ts"),
     ];
-    this.program = ts.createProgram({ rootNames, options: compilerOptions });
+    if (session) {
+      // Incremental dev build: a stable root set + options means the previous
+      // program can be reused as `oldProgram` — TS keeps the bound/checked
+      // state of every SourceFile the caching host returns unchanged, so only
+      // the edited file (and its dependents) are re-checked. A changed root set
+      // or options invalidates the program (the cached SourceFiles still serve).
+      const signature = JSON.stringify({ rootNames, paths: compilerOptions.paths, baseUrl: compilerOptions.baseUrl });
+      const oldProgram = session.signature === signature ? session.lastProgram : undefined;
+      const host = cachingHost(compilerOptions, session);
+      this.program = ts.createProgram({ rootNames, options: compilerOptions, host, oldProgram });
+      session.lastProgram = this.program;
+      session.signature = signature;
+    } else {
+      this.program = ts.createProgram({ rootNames, options: compilerOptions });
+    }
     this.checker = this.program.getTypeChecker();
   }
 
@@ -111,5 +177,6 @@ export class TsBackend implements GraphCompilerBackend {
   }
 }
 
-// The in-process `typescript` engine — the default backend.
-registerBackend("typescript", (options) => new TsBackend(options));
+// The in-process `typescript` engine — the default backend. A BackendSession
+// (dev only) enables incremental program reuse across regenerations.
+registerBackend("typescript", (options, session) => new TsBackend(options, session as TsBackendSession | undefined));
