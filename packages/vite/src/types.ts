@@ -126,6 +126,18 @@ export interface GraphPluginOptions {
   /** Framework binding (built-in name or a custom {@link FrameworkPreset}). Default `"rwsdk"`. */
   readonly framework?: FrameworkOption;
   /**
+   * Host package that transitively provides `@gleanql/client` (and its
+   * `@gleanql/core` dep) — e.g. a meta-framework that re-exports the `glean`
+   * accessor so consuming apps never declare `@gleanql/client` themselves.
+   * When set, runtime provisioning resolves the client/core SOURCE through this
+   * package (the same transitive resolution already used for `@gleanql/core`)
+   * if the app manifest doesn't declare `@gleanql/client` directly. The
+   * generated runtime is still written app-locally to
+   * `node_modules/@gleanql/client`; this only changes where the pristine source
+   * is read from.
+   */
+  readonly clientFrom?: string;
+  /**
    * Type engine used to compile routes. `"typescript"` (default) is the in-process
    * compiler; `"tsgo"` is the experimental Go-native engine
    * (`@typescript/native-preview`) — much faster type-checking on large route sets,

@@ -61,7 +61,7 @@ export interface RuntimeSources {
  *   in-place package being overwritten. A version bump reinstalls a pristine
  *   package, which produces a fresh stash.
  */
-export function resolveRuntimeSources(appRoot: string): RuntimeSources {
+export function resolveRuntimeSources(appRoot: string, clientFrom?: string): RuntimeSources {
   const repo = tryFindRepoRoot(appRoot);
   if (repo) {
     const core = path.join(repo, "packages", "core", "src");
@@ -71,10 +71,18 @@ export function resolveRuntimeSources(appRoot: string): RuntimeSources {
     }
   }
   const appManifest = path.join(appRoot, "package.json");
-  const clientRoot = packageRootOf(appManifest, "@gleanql/client");
-  // @gleanql/core is usually NOT a direct app dependency (pnpm's strict layout hides
-  // transitive deps from the app) — resolve it THROUGH the client package, which
-  // declares it.
+  // @gleanql/client is normally a direct app dependency. When a host package
+  // (e.g. a meta-framework) re-exports the accessor and the app doesn't declare
+  // @gleanql/client itself, resolve it THROUGH that host — the same transitive
+  // route used for @gleanql/core below (pnpm's strict layout hides transitive
+  // deps from the app manifest, but Node resolution from the host's realpath'd
+  // package.json reaches them).
+  const hostRoot = clientFrom ? packageRootOf(appManifest, clientFrom) : undefined;
+  const clientRoot =
+    packageRootOf(appManifest, "@gleanql/client") ??
+    (hostRoot ? packageRootOf(path.join(fs.realpathSync(hostRoot), "package.json"), "@gleanql/client") : undefined);
+  // @gleanql/core is usually NOT a direct app dependency — resolve it THROUGH the
+  // client package, which declares it.
   const coreRoot =
     packageRootOf(appManifest, "@gleanql/core") ??
     (clientRoot ? packageRootOf(path.join(fs.realpathSync(clientRoot), "package.json"), "@gleanql/core") : undefined);
@@ -83,7 +91,9 @@ export function resolveRuntimeSources(appRoot: string): RuntimeSources {
   if (!core || !client) {
     throw new Error(
       "@gleanql/vite: cannot locate the @gleanql/client and @gleanql/core sources. " +
-        "Install @gleanql/client in the app (the packages ship their src/), or run inside the glean monorepo." +
+        "Install @gleanql/client in the app (the packages ship their src/)" +
+        (clientFrom ? `, expose it through the configured host package '${clientFrom}',` : ",") +
+        " or run inside the glean monorepo." +
         (core ? "" : " Missing: @gleanql/core.") +
         (client ? "" : " Missing: @gleanql/client."),
     );

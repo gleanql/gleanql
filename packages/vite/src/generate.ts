@@ -100,7 +100,7 @@ export async function generate(
   preset: FrameworkPreset = resolvePreset(options.framework),
 ): Promise<GenerateResult> {
   const out = path.join(appRoot, "node_modules", CLIENT);
-  await provisionRuntime(appRoot, out);
+  await provisionRuntime(appRoot, out, options.clientFrom);
   return regenerate(appRoot, options, preset);
 }
 
@@ -140,8 +140,8 @@ export async function regenerate(
  * running inside it, or from the INSTALLED packages' shipped `src/` otherwise
  * (stashed before this overwrite — see {@link resolveRuntimeSources}).
  */
-async function provisionRuntime(appRoot: string, out: string): Promise<void> {
-  const sources = resolveRuntimeSources(appRoot);
+async function provisionRuntime(appRoot: string, out: string, clientFrom?: string): Promise<void> {
+  const sources = resolveRuntimeSources(appRoot, clientFrom);
   await provisionPackage(sources.core, appRoot, "@gleanql/core");
   fs.rmSync(out, { recursive: true, force: true });
   await transpileDir(sources.client, path.join(out, "src"));
