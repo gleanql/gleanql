@@ -31,7 +31,7 @@
     }
   },
   "scripts": {
-    "build": "tsdown src/index.ts --format esm --dts.eager"
+    "build": "NODE_OPTIONS=--max-old-space-size=4096 tsdown src/index.ts --format esm --dts.eager"
   },
   "dependencies": {
     "@gleanql/core": "workspace:*"

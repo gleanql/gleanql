@@ -11,7 +11,7 @@ import {
   type AstFacade,
   type BackendOptions,
   type GraphCompilerBackend,
-  type TsBackendSession,
+  type BackendSession,
 } from "@gleanql/compiler";
 import type { OperationArtifact, SchemaModel } from "@gleanql/core";
 import { emitDeclarations, listTsx, provisionPackage, readAppPaths, resolveRuntimeSources, transpileDir } from "./provision.js";
@@ -107,7 +107,7 @@ export interface GenerateResult {
  */
 export interface DevCache {
   codegen?: { sdl: string; result: Codegen };
-  readonly backendSession: TsBackendSession;
+  readonly backendSession: BackendSession;
 }
 
 export function createDevCache(): DevCache {
