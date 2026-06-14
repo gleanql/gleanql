@@ -332,7 +332,7 @@ async function analyzeOperations(args: {
 async function selectBackend(
   kind: GraphPluginOptions["backend"],
   backendOpts: BackendOptions,
-  session?: TsBackendSession,
+  session?: BackendSession,
 ): Promise<{ backend: GraphCompilerBackend; ast?: AstFacade }> {
   if (kind === "tsgo") {
     try {
