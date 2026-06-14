@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.5 (2026-06-14)
+
+### @gleanql/vite, @gleanql/compiler
+- Incremental dev cache — roughly 6x faster HMR recompiles. Two caches persist
+  across a dev session: the SDL codegen (the schema is static, so introspection
+  + model are reused) and the type engine's `ts.Program` via a new
+  `BackendSession` (a SourceFile cache + `oldProgram` reuse, so a single-file
+  edit re-checks only the edited route and its dependents instead of rebuilding
+  the whole program, lib files and all). On the Shopify Admin schema a field
+  edit drops from ~1.2s to ~0.2s. Dev-only — production builds stay clean and
+  from scratch. Compiled output is identical.
+
 ## 0.1.4 (2026-06-14)
 
 ### @gleanql/vite

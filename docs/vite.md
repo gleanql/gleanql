@@ -69,6 +69,8 @@ It also shows any compiler diagnostics from the last generate. Everything is com
 
 Editing is live. The plugin watches your route files, the schema, and the registered-operations module. Adding a field read **recompiles the operation immediately**, with no server restart. The plugin then invalidates the module graphs and reloads the page with the new data shape.
 
+Recompilation is **incremental**. Within a dev session two caches persist across edits: the SDL codegen (the schema is static, so its introspection + model are reused) and the type engine's `ts.Program` (a single-file edit reuses every unchanged SourceFile — including the multi-megabyte `lib.*.d.ts` — and re-checks only the edited route and its dependents). On a large schema this is the difference between a ~1.2s and a ~0.2s recompile. The caches are dev-only; production builds are always clean and from scratch.
+
 Every build emits `generated/persisted.json`: a sorted `{ "<sha256>": "<document>" }` manifest. The manifest is the sync artifact for a separately-deployed GraphQL server's allowlist. Persisted mode doesn't change the emission — it makes the client *use* the hashes.
 
 ## Type-check backend (`typescript` / `tsgo`)
