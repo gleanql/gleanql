@@ -118,10 +118,13 @@ export async function generate(
   appRoot: string,
   options: GraphPluginOptions,
   preset: FrameworkPreset = resolvePreset(options.framework),
+  cache?: DevCache,
 ): Promise<GenerateResult> {
   const out = path.join(appRoot, "node_modules", CLIENT);
   await provisionRuntime(appRoot, out, options.clientFrom);
-  return regenerate(appRoot, options, preset);
+  // Passing the cache here primes it during the boot build (codegen + the
+  // incremental ts.Program), so the FIRST field edit is as fast as the rest.
+  return regenerate(appRoot, options, preset, cache);
 }
 
 /**
@@ -139,8 +142,12 @@ export async function regenerate(
   const gen = path.join(out, "generated");
   const support = path.join(out, "_support"); // stub graph.ts + branded schema.ts for the compiler
 
-  const cg = runCodegen(appRoot, options.schema, cache);
-  await writePackageSkeleton({ out, gen, support, cg, preset });
+  const { cg, fromCache } = runCodegen(appRoot, options.schema, cache);
+  // The skeleton (types, schema model — an esbuild bundle — graph stub, package
+  // exports) derives entirely from codegen. On a codegen cache hit it is already
+  // on disk and byte-identical, so skip rewriting it; only the per-edit
+  // operations slot (emitGenerated, below) changes.
+  if (!fromCache) await writePackageSkeleton({ out, gen, support, cg, preset });
 
   const discovery = discoverFiles(appRoot, preset, options, cg.schemaModel);
   const analyzed = await analyzeOperations({ discovery, support, schema: cg.schemaModel, options, appRoot, cache });
@@ -169,12 +176,16 @@ async function provisionRuntime(appRoot: string, out: string, clientFrom?: strin
   emitDeclarations(appRoot, sources);
 }
 
-/** 2. Codegen from the SDL → branded types, the schema model (source + evaluated), the graph stub. */
-function runCodegen(appRoot: string, schemaPath: string, cache?: DevCache): Codegen {
+/**
+ * 2. Codegen from the SDL → branded types, the schema model (source + evaluated), the graph stub.
+ * `fromCache` is true when the SDL was byte-identical to the cached run, which also means the
+ * on-disk package skeleton derived from it is already current (the caller can skip rewriting it).
+ */
+function runCodegen(appRoot: string, schemaPath: string, cache?: DevCache): { cg: Codegen; fromCache: boolean } {
   const sdl = fs.readFileSync(path.join(appRoot, schemaPath), "utf8");
   // The SDL is static within a dev session — route edits never touch it. Reuse
   // the (expensive on large schemas) codegen output when the SDL is byte-identical.
-  if (cache?.codegen && cache.codegen.sdl === sdl) return cache.codegen.result;
+  if (cache?.codegen && cache.codegen.sdl === sdl) return { cg: cache.codegen.result, fromCache: true };
   const introspection = introspectionFromSchema(buildSchema(sdl)).__schema as unknown as IntrospectionSchema;
   const schemaModelSrc = generateSchemaModel(introspection);
   const result: Codegen = {
@@ -185,7 +196,7 @@ function runCodegen(appRoot: string, schemaPath: string, cache?: DevCache): Code
     schemaModel: evalSchemaModel(schemaModelSrc),
   };
   if (cache) cache.codegen = { sdl, result };
-  return result;
+  return { cg: result, fromCache: false };
 }
 
 /**

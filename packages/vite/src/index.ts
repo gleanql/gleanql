@@ -68,9 +68,12 @@ export function glean(options: GraphPluginOptions): GraphVitePlugin {
   return {
     name: "graph",
     enforce: "pre",
-    async config(): Promise<GraphViteConfigPatch> {
+    async config(_config, env): Promise<GraphViteConfigPatch> {
       if (!done) {
-        generated = await generate(process.cwd(), options, preset);
+        // Prime the dev cache during the boot build (serve only) so the first
+        // edit reuses it; production builds run once and pass no cache.
+        if (env?.command === "serve") devCache ??= createDevCache();
+        generated = await generate(process.cwd(), options, preset, devCache);
         done = true;
       }
       // The dep optimizer vs generated code: a stale prebundle of the generated

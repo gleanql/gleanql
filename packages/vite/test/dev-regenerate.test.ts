@@ -68,7 +68,7 @@ function preset(withDigest: boolean, volatileModules?: readonly string[], hotUpd
 async function boot(p: FrameworkPreset, serverOptions: Parameters<typeof makeServer>[0] = {}) {
   vi.mocked(generate).mockResolvedValue(result("h1"));
   const plugin = glean({ schema: "schema.graphql", framework: p });
-  await plugin.config();
+  await plugin.config({}, { command: "serve" });
   const made = makeServer(serverOptions);
   plugin.configureServer(made.server);
   const edit = async (hash: string) => {

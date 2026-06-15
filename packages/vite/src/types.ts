@@ -247,10 +247,15 @@ export interface GraphViteConfigPatch {
   };
 }
 
+/** The slice of Vite's `ConfigEnv` we read (structural — no vite dep). */
+export interface GraphConfigEnv {
+  readonly command: "build" | "serve";
+}
+
 export interface GraphVitePlugin {
   readonly name: string;
   readonly enforce: "pre";
-  config(): Promise<GraphViteConfigPatch>;
+  config(config: unknown, env: GraphConfigEnv): Promise<GraphViteConfigPatch>;
   /** Dev-only: serves the `/__glean` devtools overlay. */
   configureServer(server: GraphDevServer): void;
   transform(
