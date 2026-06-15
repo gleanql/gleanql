@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.6 (2026-06-15)
+
+### @gleanql/vite
+- Dev cache follow-ups: the codegen + incremental-program caches are now primed
+  during the boot build, so the FIRST field edit after `dev` is fast (not just
+  edits 2+); and the package skeleton (an esbuild bundle of the schema model) is
+  skipped on a codegen cache-hit. Steady-state HMR recompile stays ~0.2s and the
+  first edit now matches it.
+
 ## 0.1.5 (2026-06-14)
 
 ### @gleanql/vite, @gleanql/compiler
