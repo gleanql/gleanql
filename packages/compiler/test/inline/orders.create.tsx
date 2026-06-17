@@ -8,6 +8,6 @@ function webhook<T>(_topic: string, handler: T): T {
 }
 
 export default webhook("orders/create", () => {
-  const products = glean.products();
-  return products.map((p) => p.title);
+  const product = glean.product({ handle: "advent" });
+  return product.title;
 });

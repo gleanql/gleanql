@@ -26,7 +26,7 @@ describe("anonymous handler via default export", () => {
 
   it("selects the fields the handler reads", () => {
     const doc = result.operations[0]!.document;
-    expect(doc).toContain("products");
+    expect(doc).toContain("product");
     expect(doc).toContain("title");
   });
 });
