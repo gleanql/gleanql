@@ -96,6 +96,7 @@ function makeFacade(ast: Any): AstFacade {
     isArrowFunction: ast.isArrowFunction,
     isFunctionExpression: ast.isFunctionExpression,
     isFunctionDeclaration: ast.isFunctionDeclaration,
+    isExportAssignment: ast.isExportAssignment,
     isObjectBindingPattern: ast.isObjectBindingPattern,
     isPropertyAssignment: ast.isPropertyAssignment,
     isShorthandPropertyAssignment: ast.isShorthandPropertyAssignment,

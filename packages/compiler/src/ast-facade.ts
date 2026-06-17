@@ -30,6 +30,7 @@ export interface AstFacade {
   isArrowFunction(n: ts.Node): n is ts.ArrowFunction;
   isFunctionExpression(n: ts.Node): n is ts.FunctionExpression;
   isFunctionDeclaration(n: ts.Node): n is ts.FunctionDeclaration;
+  isExportAssignment(n: ts.Node): n is ts.ExportAssignment;
   isObjectBindingPattern(n: ts.Node): n is ts.ObjectBindingPattern;
   isPropertyAssignment(n: ts.Node): n is ts.PropertyAssignment;
   isShorthandPropertyAssignment(n: ts.Node): n is ts.ShorthandPropertyAssignment;
@@ -76,6 +77,26 @@ export function isFunctionLike(ast: AstFacade, n: ts.Node): n is ts.ArrowFunctio
   return ast.isArrowFunction(n) || ast.isFunctionExpression(n);
 }
 
+/**
+ * Operation name for an anonymous component reached through a module's default
+ * export (e.g. a handler passed inline to `webhook("orders/create", () => …)`),
+ * which has no binding to name the operation after. We name it after the source
+ * file: take the basename, drop the final extension, and PascalCase the rest on
+ * any non-alphanumeric boundary — `src/webhooks/orders.create.ts` → `OrdersCreate`.
+ * Deliberately depends ONLY on the basename (no directory) so a consumer can
+ * reproduce the exact name from any path to the same file without normalization.
+ */
+export function fileDerivedComponentName(fileName: string): string {
+  const base = fileName.split(/[\\/]/).pop() ?? fileName;
+  const stem = base.replace(/\.[^.]+$/, "");
+  const pascal = stem
+    .split(/[^a-zA-Z0-9]+/)
+    .filter(Boolean)
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+    .join("");
+  return pascal || "Default";
+}
+
 function substituteCtx(expr: ts.Expression, paramNames: readonly string[]): ts.Expression {
   const visit = (node: ts.Node): ts.Node => {
     // Strip TS-only syntax that would be invalid in the emitted JS factory
@@ -115,6 +136,7 @@ export const typescriptFacade: AstFacade = {
   isArrowFunction: ts.isArrowFunction,
   isFunctionExpression: ts.isFunctionExpression,
   isFunctionDeclaration: ts.isFunctionDeclaration,
+  isExportAssignment: ts.isExportAssignment,
   isObjectBindingPattern: ts.isObjectBindingPattern,
   isPropertyAssignment: ts.isPropertyAssignment,
   isShorthandPropertyAssignment: ts.isShorthandPropertyAssignment,

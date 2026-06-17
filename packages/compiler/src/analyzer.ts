@@ -13,7 +13,7 @@ import {
   hashDocument,
 } from "@gleanql/core";
 import type { GraphCompilerBackend } from "./backend.js";
-import { type AstFacade, isFunctionLike, typescriptFacade } from "./ast-facade.js";
+import { type AstFacade, fileDerivedComponentName, isFunctionLike, typescriptFacade } from "./ast-facade.js";
 import { MutableSelection } from "./mutable.js";
 import { VariablesBuilder } from "./variables.js";
 import { findSelectorHookSites } from "./mutation-binding.js";
@@ -146,8 +146,57 @@ class Analyzer {
             this.addComponent(decl.name.text, decl.initializer.parameters, decl.initializer.body, decl);
           }
         }
+      } else if (this.ast.isFunctionDeclaration(stmt) && !stmt.name) {
+        // Anonymous `export default function () {}` (a function declaration may
+        // omit its name *only* as a default export — the common proxy-handler
+        // shape, and an anonymous default page). No binding, so name from file.
+        if (this.bodyContainsGraphRoot(stmt.body)) {
+          const name = fileDerivedComponentName(this.sf.fileName);
+          if (!this.componentsByName.has(name)) {
+            this.addComponent(name, stmt.parameters, stmt.body, stmt);
+          }
+        }
+      } else if (this.ast.isExportAssignment(stmt)) {
+        // `export default <expr>` — index an anonymous graph-opening function
+        // reached through the default export (a handler passed inline to
+        // `webhook("orders/create", () => …)`, a proxy/job default arrow, an
+        // anonymous default page). It has no binding, so the operation is named
+        // after the source file (see `fileDerivedComponentName`). A *named*
+        // default export (`export default function Foo` or `export default Foo`)
+        // is already indexed by the branches above / the import follower, so we
+        // only synthesize a component for the genuinely anonymous case.
+        const fn = this.findInlineGraphFunction(stmt.expression);
+        if (fn) {
+          const name = fileDerivedComponentName(this.sf.fileName);
+          if (!this.componentsByName.has(name)) {
+            this.addComponent(name, fn.parameters, fn.body, fn);
+          }
+        }
       }
     }
+  }
+
+  /**
+   * Find the outermost anonymous function inside a `export default` expression
+   * whose body opens a graph root — e.g. the callback in
+   * `webhook("orders/create", async (data) => { glean.shop() })`. Descends
+   * through call arguments and wrappers but does not look inside a function that
+   * itself opens a root (that function IS the handler we want).
+   */
+  private findInlineGraphFunction(
+    node: ts.Node,
+  ): ts.ArrowFunction | ts.FunctionExpression | undefined {
+    let found: ts.ArrowFunction | ts.FunctionExpression | undefined;
+    const visit = (n: ts.Node): void => {
+      if (found) return;
+      if (isFunctionLike(this.ast, n)) {
+        if (this.bodyContainsGraphRoot(n.body)) found = n;
+        return;
+      }
+      this.ast.forEachChild(n, visit);
+    };
+    visit(node);
+    return found;
   }
 
   private indexRegistries(): void {
@@ -178,14 +227,19 @@ class Analyzer {
   }
 
   private containsGraphRoot(comp: ComponentInfo): boolean {
-    const accessors = this.graphAccessorNames(comp.body);
+    return this.bodyContainsGraphRoot(comp.body);
+  }
+
+  private bodyContainsGraphRoot(body: ts.Node | undefined): boolean {
+    if (!body) return false;
+    const accessors = this.graphAccessorNames(body);
     let found = false;
     const visit = (node: ts.Node): void => {
       if (found) return;
       if (this.ast.isCallExpression(node) && this.graphRootName(node, accessors)) found = true;
       else this.ast.forEachChild(node, visit);
     };
-    if (comp.body) visit(comp.body);
+    visit(body);
     return found;
   }
 
