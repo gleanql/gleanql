@@ -1,6 +1,6 @@
 {
   "name": "@gleanql/core",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Glean's GraphQL operation IR: builder, merger, printer and schema model",
   "license": "MIT",
   "author": "Alexander Liljengard",
