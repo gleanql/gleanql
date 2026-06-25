@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.8 (2026-06-25)
+
+### @gleanql/vite
+- Fix: an `async` route component (e.g. `export default async function Page()`
+  that `await`s alongside its `glean.*` reads) no longer breaks the RSC-hydrator
+  auto-inject. The route transform dropped every leading modifier as one span
+  when stripping `export`/`default` — and since `async` is also a modifier that
+  follows them on a function declaration, it was stripped too, leaving `await`
+  in a non-async function (`SyntaxError: Unexpected reserved word 'await'`). It
+  now removes only the `export`/`default` keywords and preserves `async`.
+
 ## 0.1.6 (2026-06-15)
 
 ### @gleanql/vite

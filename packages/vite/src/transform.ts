@@ -61,10 +61,17 @@ export function wrapRouteComponents(
       const isExport = hasModifier(stmt, ts.SyntaxKind.ExportKeyword);
       if (!isExport) continue;
       const isDefault = hasModifier(stmt, ts.SyntaxKind.DefaultKeyword);
-      // Strip the export/default modifiers and rename the function.
-      const modsEnd = lastModifierEnd(stmt, sf);
-      const declStart = stmt.getStart(sf);
-      edits.push({ start: declStart, end: modsEnd, text: "" }); // drop modifiers
+      // Strip ONLY the `export`/`default` keywords, then rename the function.
+      // `async` is also a modifier and — for a function declaration — follows
+      // `export default`, so dropping through the LAST modifier (as a single
+      // span) would strip `async` too and leave `await` in a non-async function
+      // ("Unexpected reserved word 'await'"). Remove the export/default tokens
+      // individually and keep `async` (and any other modifier).
+      for (const m of ts.getModifiers(stmt) ?? []) {
+        if (m.kind === ts.SyntaxKind.ExportKeyword || m.kind === ts.SyntaxKind.DefaultKeyword) {
+          edits.push({ start: m.getStart(sf), end: m.getEnd(), text: "" });
+        }
+      }
       edits.push({ start: stmt.name.getStart(sf), end: stmt.name.getEnd(), text: INNER(name) });
       wrapped.push(
         isDefault

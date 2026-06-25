@@ -37,6 +37,30 @@ describe("wrapRouteComponents (RSC hydrator auto-inject)", () => {
     expect(out).toContain("export default __graphWithHydration(__graphInner_Page);");
   });
 
+  it("preserves `async` on `export default async function` (await stays valid)", () => {
+    const out = wrapRouteComponents(
+      `export default async function Page() { const x = await load(); return <main>{x}</main>; }`,
+      "Page.tsx",
+      names("Page"),
+    );
+    expect(out).not.toBeNull();
+    // `async` must survive — otherwise `await` lands in a non-async function.
+    expect(out).toContain("async function __graphInner_Page()");
+    expect(out).not.toMatch(/(?<!async )function __graphInner_Page\(\)/);
+    expect(out).toContain("export default __graphWithHydration(__graphInner_Page);");
+  });
+
+  it("preserves `async` on `export async function`", () => {
+    const out = wrapRouteComponents(
+      `export async function Orders() { const x = await load(); return <ul>{x}</ul>; }`,
+      "Orders.tsx",
+      names("Orders"),
+    );
+    expect(out).toContain("async function __graphInner_Orders()");
+    expect(out).not.toContain("export async function Orders");
+    expect(out).toContain("export const Orders = __graphWithHydration(__graphInner_Orders);");
+  });
+
   it("wraps `export { Local as Name }` (rename re-export)", () => {
     const out = wrapRouteComponents(
       `function Impl() { return null; }\nexport { Impl as ProductPage };`,
