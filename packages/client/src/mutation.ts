@@ -133,6 +133,40 @@ export async function runMutation<TData = Record<string, unknown>>(
   return { data, userErrors: [], ok: true };
 }
 
+/**
+ * Server-side mutation execution: run a compiled mutation through the adapter and
+ * surface `userErrors`, WITHOUT a client cache/runtime. This is the core of the
+ * server `mutate()` primitive — server actions, webhooks, jobs, and proxy handlers
+ * mutate Shopify without a hydrated read graph. Never rejects for logical failures;
+ * inspect `ok`/`userErrors`/`errors`.
+ */
+export async function runServerMutation<TData = Record<string, unknown>>(params: {
+  readonly operation: { readonly name: string; readonly document: string };
+  readonly variables: Record<string, unknown>;
+  readonly adapter: GraphClientAdapter;
+  readonly context: GraphRequestContext;
+}): Promise<MutationResult<TData>> {
+  let result;
+  try {
+    result = await params.adapter.execute(
+      { name: params.operation.name, kind: "mutation", document: params.operation.document },
+      params.variables,
+      params.context,
+    );
+  } catch (error) {
+    return { userErrors: [], errors: [{ message: errorMessage(error) }], ok: false };
+  }
+
+  if (result.errors && result.errors.length > 0) {
+    return { userErrors: [], errors: result.errors, ok: false };
+  }
+
+  const data = result.data as TData | undefined;
+  const userErrors = data ? extractUserErrors(data as Record<string, unknown>) : [];
+  if (userErrors.length > 0) return { data, userErrors, ok: false };
+  return { data, userErrors: [], ok: true };
+}
+
 /** Invalidate a record by graph value (proxy) or raw ref — next read re-fetches. */
 export function invalidateValue(runtime: GraphRuntime, value: GraphRef | unknown): void {
   const ref = toRef(value);

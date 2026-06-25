@@ -4,6 +4,8 @@ import {
   createMutator,
   invalidateValue,
   runRoute,
+  runServerMutation,
+  type MutationResult,
   type BoundGraph,
   type BoundMutations,
   type CompiledOperation,
@@ -83,6 +85,17 @@ export interface GraphIntegration<Ctx extends Record<string, unknown>> {
   getGraph(requestInfo: RequestInfo<Ctx>): BoundGraph;
   /** The `graph.mutate.*` namespace for this request (throws if not preloaded). */
   getMutator(requestInfo: RequestInfo<Ctx>): BoundMutations;
+  /**
+   * Run a compiled mutation by name, server-side, WITHOUT a preloaded read graph —
+   * the executor behind the server `mutate()` primitive (server actions, webhooks,
+   * jobs). Resolves the op, maps `vars` via its factory, runs it through the
+   * adapter, and surfaces `userErrors`. Never rejects; inspect `ok`/`userErrors`.
+   */
+  mutate<TData = unknown>(
+    opName: string,
+    vars: unknown,
+    context?: GraphRequestContext,
+  ): Promise<MutationResult<TData>>;
   /** Invalidate a graph value / ref in this request's cache (refetch on next read). */
   invalidate(requestInfo: RequestInfo<Ctx>, value: GraphRef | unknown): void;
   /** Read the full active request state (runtime, roots, variables, ...). */
@@ -192,7 +205,28 @@ export function createGraphIntegration<Ctx extends Record<string, unknown> = Rec
     return options.scope.run({ runtime: active.runtime, graph: active.graph }, fn);
   }
 
-  return { preload, getGraph, getMutator, invalidate, getActive, refetch, runInScope };
+  async function mutate<TData = unknown>(
+    opName: string,
+    vars: unknown,
+    context?: GraphRequestContext,
+  ): Promise<MutationResult<TData>> {
+    const op = options.operations[opName];
+    if (!op || op.kind !== "mutation") {
+      return { ok: false, userErrors: [], errors: [{ message: `unknown mutation operation: ${opName}` }] };
+    }
+    // A mutation op's `variables` factory maps the selector `vars` (not the route
+    // context the read-typed signature expects) — same cast `resolveBoundOp` uses.
+    const toVariables = op.variables as (vars: unknown) => Record<string, unknown> | undefined;
+    const variables = (toVariables(vars) ?? {}) as Record<string, unknown>;
+    return runServerMutation<TData>({
+      operation: { name: op.name, document: op.document },
+      variables,
+      adapter: options.adapter,
+      context: context ?? ({} as GraphRequestContext),
+    });
+  }
+
+  return { preload, getGraph, getMutator, invalidate, getActive, refetch, runInScope, mutate };
 }
 
 /** Default missing-field resolution: leave each miss undefined (hybrid allow/warn). */

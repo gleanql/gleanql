@@ -19,10 +19,17 @@ import { isFunctionLike, type AstFacade } from "./ast-facade.js";
  * derive identical names from the same AST, in document order.
  */
 
-/** The selector hooks that compile to operations, and the op kind each produces. */
+/**
+ * The selector callees that compile to operations, and the op kind each produces.
+ * `useMutation`/`useSubscription` are client hooks; `mutate` is the server-side
+ * mutation primitive — `await mutate((m, vars) => m.field(vars)..., vars)` in a
+ * server action / webhook / job — compiled the same way (selector → named op,
+ * opName injected by the binding transform), just executed server-side.
+ */
 export const SELECTOR_HOOKS: Readonly<Record<string, OperationKind>> = {
   useMutation: "mutation",
   useSubscription: "subscription",
+  mutate: "mutation",
 };
 
 export interface SelectorHookSite {

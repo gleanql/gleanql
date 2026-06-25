@@ -1,5 +1,7 @@
 import ts from "typescript";
-import { findSelectorHookSites, typescriptFacade } from "@gleanql/compiler";
+import { findSelectorHookSites, typescriptFacade, SELECTOR_HOOKS } from "@gleanql/compiler";
+
+const SELECTOR_NAMES = Object.keys(SELECTOR_HOOKS);
 
 /**
  * Bind selector hooks (`useMutation` / `useSubscription`) to their compiled
@@ -17,9 +19,12 @@ import { findSelectorHookSites, typescriptFacade } from "@gleanql/compiler";
  * or `null`.
  */
 export function bindSelectorHookOps(code: string, fileName: string): string | null {
-  // Cheap pre-check: skip files that can't contain a bound selector-hook call.
-  if (!code.includes("@gleanql/client/client")) return null;
-  if (!code.includes("useMutation") && !code.includes("useSubscription")) return null;
+  // Cheap pre-check: skip files that can't contain a selector-hook call. The
+  // real gate is the selector SHAPE (`(accessor, vars) => accessor.field(...)`)
+  // enforced by findSelectorHookSites — so we only need the callee name to
+  // appear. (`mutate` is the server primitive, imported from the framework, so
+  // we can't gate on a `@gleanql/client/client` import the way the hooks could.)
+  if (!SELECTOR_NAMES.some((n) => code.includes(n))) return null;
 
   const sf = ts.createSourceFile(fileName, code, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   const sites = findSelectorHookSites(sf, typescriptFacade);

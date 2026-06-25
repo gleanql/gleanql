@@ -225,6 +225,60 @@ describe("integration mutations", () => {
     integration.invalidate(ri, productRef);
     expect(active!.runtime.cache.hasRecord(productRef as any)).toBe(false);
   });
+
+  // The server `mutate()` primitive: a compiled mutation, executed server-side
+  // with NO preloaded read graph (server actions / webhooks / jobs).
+  const fulfill: CompiledOperation<GraphRouteContext> = {
+    name: "Book_fulfillmentCreate",
+    kind: "mutation",
+    document:
+      "mutation Book_fulfillmentCreate($id: ID!) { fulfillmentCreate(id: $id) { fulfillment { __typename id } userErrors { field message } } }",
+    hash: "f1",
+    // selector-style: maps the call's vars directly (not a route context)
+    variables: (vars: any) => ({ id: vars.id }),
+    readMap: {},
+  };
+
+  it("integration.mutate runs a compiled mutation standalone (no preload) and returns the result", async () => {
+    const execute = vi.fn(async (): Promise<GraphResult<unknown>> => ({
+      data: { fulfillmentCreate: { fulfillment: { __typename: "Fulfillment", id: "f/1" }, userErrors: [] } },
+    }));
+    const integration = createGraphIntegration({
+      schema,
+      operations: { ...operations, Book_fulfillmentCreate: fulfill },
+      adapter: { execute } as GraphClientAdapter,
+    });
+    const result = await integration.mutate("Book_fulfillmentCreate", { id: "gid://shopify/Order/1" });
+    expect(execute).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Book_fulfillmentCreate", kind: "mutation" }),
+      { id: "gid://shopify/Order/1" },
+      expect.anything(),
+    );
+    expect(result.ok).toBe(true);
+    expect((result.data as any).fulfillmentCreate.fulfillment.id).toBe("f/1");
+  });
+
+  it("integration.mutate surfaces userErrors as ok:false", async () => {
+    const execute = vi.fn(async (): Promise<GraphResult<unknown>> => ({
+      data: { fulfillmentCreate: { fulfillment: null, userErrors: [{ field: ["id"], message: "no such order" }] } },
+    }));
+    const integration = createGraphIntegration({
+      schema,
+      operations: { ...operations, Book_fulfillmentCreate: fulfill },
+      adapter: { execute } as GraphClientAdapter,
+    });
+    const result = await integration.mutate("Book_fulfillmentCreate", { id: "x" });
+    expect(result.ok).toBe(false);
+    expect(result.userErrors[0]!.message).toBe("no such order");
+  });
+
+  it("integration.mutate returns an error for an unknown / non-mutation operation", async () => {
+    const { adapter } = dualAdapter();
+    const integration = createGraphIntegration({ schema, operations, adapter });
+    expect((await integration.mutate("NoSuch", {})).errors?.[0]?.message).toContain("unknown mutation operation");
+    // ProductRoute is a query, not a mutation
+    expect((await integration.mutate("ProductRoute", {})).ok).toBe(false);
+  });
 });
 
 describe("runInScope", () => {

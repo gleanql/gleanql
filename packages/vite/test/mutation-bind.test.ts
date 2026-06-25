@@ -62,6 +62,19 @@ describe("bindSelectorHookOps (useMutation/useSubscription(selector) → op-name
     expect(out).toContain('useSubscription((s, vars) => s.productChanged(vars).title, undefined, "LiveTitle_productChanged")');
   });
 
+  it("binds the server `mutate(selector, vars)` primitive (imported from the framework)", () => {
+    const out = bindSelectorHookOps(
+      `import { mutate } from "@shoplayer/framework";\n` +
+        `export async function bookShipment(args) {\n` +
+        `  const res = await mutate((m, vars) => m.fulfillmentCreate(vars).fulfillment.id, { id: args.id });\n` +
+        `  return res;\n}\n`,
+      "booking.ts",
+    );
+    expect(out).toContain(
+      'mutate((m, vars) => m.fulfillmentCreate(vars).fulfillment.id, { id: args.id }, "bookShipment_fulfillmentCreate")',
+    );
+  });
+
   it("leaves already-bound calls (three args) and non-glue files alone", () => {
     const bound =
       `import { useMutation } from "@gleanql/client/client";\n` +

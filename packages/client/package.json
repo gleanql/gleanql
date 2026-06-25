@@ -1,6 +1,6 @@
 {
   "name": "@gleanql/client",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Glean's runtime: normalized cache, fine-grained reactivity, mutations, subscriptions and React hooks",
   "license": "MIT",
   "author": "Alexander Liljengard",

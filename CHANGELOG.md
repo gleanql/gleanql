@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.9 (2026-06-25)
+
+### @gleanql/compiler, @gleanql/client, @gleanql/vite
+- New: a server-side mutation primitive. `mutate((m, vars) => m.field(vars)..., vars)`
+  is now a recognized selector callee (alongside the `useMutation`/`useSubscription`
+  client hooks) — the compiler compiles its selector into a named mutation operation
+  and the build transform injects the op name, exactly as for the hooks. The runtime
+  is `integration.mutate(opName, vars)`: it resolves the compiled op, maps `vars` via
+  the op's factory, runs it through the adapter, and surfaces `userErrors` — with NO
+  preloaded read graph, so it works in server actions / webhooks / jobs (anywhere the
+  adapter is request-authed). Frameworks expose it by forwarding to `integration.mutate`.
+  Also exported `runServerMutation` (the cacheless executor) from `@gleanql/client`.
+
 ## 0.1.8 (2026-06-25)
 
 ### @gleanql/vite
