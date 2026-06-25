@@ -32,6 +32,30 @@ export const mockSchema: SchemaModel = defineSchema({
         },
         // A scalar-returning mutation (exercises the leaf-root path).
         removeProduct: { name: "removeProduct", type: "ID", args: [{ name: "id", type: "ID!" }] },
+        // A Shopify-style payload mutation (exercises auto userErrors injection).
+        productUpdate: {
+          name: "productUpdate",
+          type: "ProductUpdatePayload",
+          args: [{ name: "input", type: "ProductInput!" }],
+        },
+      },
+    },
+    {
+      name: "ProductUpdatePayload",
+      kind: "object",
+      keys: [],
+      fields: {
+        product: { name: "product", type: "Product" },
+        userErrors: { name: "userErrors", type: "UserError", list: true, nonNull: true },
+      },
+    },
+    {
+      name: "UserError",
+      kind: "object",
+      keys: [],
+      fields: {
+        field: { name: "field", type: "String", list: true },
+        message: { name: "message", type: "String", nonNull: true },
       },
     },
     {

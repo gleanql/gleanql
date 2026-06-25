@@ -112,6 +112,25 @@ describe("compileSelectorOperation", () => {
     expect(op?.document).toBe("mutation C_removeProduct($id: ID!) {\n  removeProduct(id: $id)\n}\n");
   });
 
+  it("auto-selects userErrors { field message } on a mutation payload (caller need not read it)", () => {
+    // The selector only pulls product.id — userErrors is injected so the server
+    // mutate() primitive's MutationResult.userErrors is always populated.
+    const op = compileFirst(
+      `function C() { const [save] = useMutation((m, vars) => m.productUpdate(vars).product.id); }`,
+    );
+    expect(op?.kind).toBe("mutation");
+    expect(op?.document).toContain("userErrors {");
+    expect(op?.document).toContain("message");
+    expect(op?.document).toContain("field");
+  });
+
+  it("does not inject userErrors on a payload type that has none (plain entity return)", () => {
+    const op = compileFirst(
+      `function C() { const [save] = useMutation((m, vars) => m.setProductTitle(vars).title); }`,
+    );
+    expect(op?.document).not.toContain("userErrors");
+  });
+
   it("returns undefined when the selector reads nothing off the root", () => {
     // `m.setProductTitle(vars)` with no field read → empty result selection.
     const sf = ts.createSourceFile(

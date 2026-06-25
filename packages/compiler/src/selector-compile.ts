@@ -135,6 +135,8 @@ export function compileSelectorOperation(
     evalSelector(body); // arrow expression body
   }
 
+  if (site.kind === "mutation") injectUserErrors(rootSel, schema);
+
   const selection = mergeSelectionSets([rootSel.toIR()], schema, { isRoot: true });
   if (selection.fields.length === 0) return undefined; // nothing compiled
 
@@ -152,6 +154,37 @@ export function compileSelectorOperation(
     source: sf.fileName,
     stats: ctx.computeStats(ir.selection),
   };
+}
+
+/**
+ * Shopify-style mutation payloads carry a `userErrors` field, which the server
+ * `mutate()` primitive surfaces as `MutationResult.userErrors`. Auto-select it —
+ * with its scalar leaves (`field`/`message`/`code`) — on every mutation-root
+ * payload that has one, so callers never have to hand-read userErrors in the
+ * selector just to get error handling. Find-or-create dedupes against anything
+ * the selector already pulled, so this only ever adds missing leaves.
+ */
+function injectUserErrors(rootSel: MutableSelection, schema: SchemaModel): void {
+  const noArgs = canonicalArgs(undefined);
+  for (const rootField of rootSel.fields) {
+    const payload = rootField.child;
+    if (!payload) continue; // scalar-returning mutation root — nothing to select
+    const ueDef = schema.getField(payload.typeName, "userErrors");
+    if (!ueDef) continue; // not an errors-bearing payload
+    const ueType = schema.getType(ueDef.type);
+    if (!ueType?.fields) continue;
+    const ueField = payload.field("userErrors", noArgs, () => ({
+      name: "userErrors",
+      key: noArgs,
+      child: new MutableSelection(ueDef.type),
+    }));
+    if (!ueField.child) continue;
+    for (const leaf of ["field", "message", "code"]) {
+      if (ueType.fields[leaf]) {
+        ueField.child.field(leaf, noArgs, () => ({ name: leaf, key: noArgs, child: undefined }));
+      }
+    }
+  }
 }
 
 /** The operation root call `m.field(args)`: lift its args to variables, open the field. */
