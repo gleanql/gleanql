@@ -272,8 +272,12 @@ function discoverFiles(
     : allFiles.filter((f) => isRouteFile(fs.readFileSync(f, "utf8"), rootFields));
 
   const routeFileSet = new Set(routeFiles.map((f) => path.resolve(f)));
+  // Files whose ONLY graph usage is a selector-hook / server-mutate call (no
+  // route root) are discovered here so their operation compiles. `useMutation`/
+  // `useSubscription` are the client hooks; `options.serverMutate` (e.g. `"mutate"`)
+  // is the framework's server mutation primitive — also a mutation callee.
   const hookNames = [
-    ...(schema.mutationType ? ["useMutation"] : []),
+    ...(schema.mutationType ? ["useMutation", ...(options.serverMutate ? [options.serverMutate] : [])] : []),
     ...(schema.subscriptionType ? ["useSubscription"] : []),
   ];
   const hookProbe = hookNames.length ? new RegExp(`\\b(?:${hookNames.join("|")})\\s*\\(`) : undefined;
@@ -315,7 +319,7 @@ async function analyzeOperations(args: {
   const diagnostics: string[] = [];
   try {
     for (const fileName of discovery.analyzeFiles) {
-      const result = analyzeFile({ fileName, backend, schema, ast });
+      const result = analyzeFile({ fileName, backend, schema, ast, serverMutate: options.serverMutate });
       for (const op of result.operations) {
         operations[op.name] = op;
         // Only query routes are wrapped with the RSC hydrator; mutation/subscription

@@ -20,17 +20,25 @@ import { isFunctionLike, type AstFacade } from "./ast-facade.js";
  */
 
 /**
- * The selector callees that compile to operations, and the op kind each produces.
- * `useMutation`/`useSubscription` are client hooks; `mutate` is the server-side
- * mutation primitive — `await mutate((m, vars) => m.field(vars)..., vars)` in a
- * server action / webhook / job — compiled the same way (selector → named op,
- * opName injected by the binding transform), just executed server-side.
+ * The built-in selector callees that compile to operations, and the op kind each
+ * produces. These are the client hooks. A framework's SERVER mutation primitive
+ * (e.g. `mutate(...)` in a server action) is configured per-build via the vite
+ * plugin's `serverMutate` option, NOT hardcoded here — see `selectorHooks()`.
  */
 export const SELECTOR_HOOKS: Readonly<Record<string, OperationKind>> = {
   useMutation: "mutation",
   useSubscription: "subscription",
-  mutate: "mutation",
 };
+
+/**
+ * The effective selector callees for a build: the built-in hooks plus an optional
+ * framework server-mutate callee (a mutation). Keeping this one function as the
+ * single source of truth means the analyzer, the binding transform, and file
+ * discovery all agree on which callees compile.
+ */
+export function selectorHooks(serverMutate?: string): Readonly<Record<string, OperationKind>> {
+  return serverMutate ? { ...SELECTOR_HOOKS, [serverMutate]: "mutation" } : SELECTOR_HOOKS;
+}
 
 export interface SelectorHookSite {
   /** Which hook this is (`"mutation"` | `"subscription"`). */
@@ -56,7 +64,11 @@ export type UseMutationSite = SelectorHookSite;
  * Detection is by the literal callee name (the same lexical convention `useGlean`
  * uses), so it works across the `typescript` and tsgo engines without a checker.
  */
-export function findSelectorHookSites(root: ts.Node, ast: AstFacade): SelectorHookSite[] {
+export function findSelectorHookSites(
+  root: ts.Node,
+  ast: AstFacade,
+  hooks: Readonly<Record<string, OperationKind>> = SELECTOR_HOOKS,
+): SelectorHookSite[] {
   const sites: SelectorHookSite[] = [];
   const counts = new Map<string, number>();
 
@@ -64,7 +76,7 @@ export function findSelectorHookSites(root: ts.Node, ast: AstFacade): SelectorHo
     const here = componentNameOf(node, ast) ?? component;
 
     if (ast.isCallExpression(node) && ast.isIdentifier(node.expression)) {
-      const kind = SELECTOR_HOOKS[node.expression.text];
+      const kind = hooks[node.expression.text];
       if (kind) {
         const selector = node.arguments[0];
         if (selector && isFunctionLike(ast, selector)) {

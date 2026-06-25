@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import ts from "typescript";
-import { compileSelectorOperation, findSelectorHookSites, typescriptFacade, type SelectorCompileContext } from "../src/index.js";
+import { compileSelectorOperation, findSelectorHookSites, selectorHooks, typescriptFacade, type SelectorCompileContext } from "../src/index.js";
 import { mockSchema } from "./support/mock-schema.js";
 
 /**
@@ -36,6 +36,24 @@ function compileFirst(code: string) {
   const rootType = site.kind === "mutation" ? mockSchema.mutationType! : mockSchema.subscriptionType!;
   return compileSelectorOperation(site, rootType, context(sf));
 }
+
+describe("configurable server-mutate callee (serverMutate option)", () => {
+  const code = `async function bookShipment() { await mutate((m, vars) => m.setProductTitle(vars).title, {}); }`;
+
+  it("is NOT a selector callee by default (Glean claims no `mutate` name)", () => {
+    const sf = ts.createSourceFile("t.tsx", code, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    expect(findSelectorHookSites(sf, typescriptFacade)).toHaveLength(0);
+  });
+
+  it("compiles to a mutation op when configured via selectorHooks('mutate')", () => {
+    const sf = ts.createSourceFile("t.tsx", code, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const [site] = findSelectorHookSites(sf, typescriptFacade, selectorHooks("mutate"));
+    expect(site?.kind).toBe("mutation");
+    const op = compileSelectorOperation(site!, mockSchema.mutationType!, context(sf));
+    expect(op?.kind).toBe("mutation");
+    expect(op?.name).toBe("bookShipment_setProductTitle");
+  });
+});
 
 describe("compileSelectorOperation", () => {
   it("compiles a mutation selector → kind:'mutation' op, lifting whole-vars to variables", () => {

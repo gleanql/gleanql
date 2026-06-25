@@ -195,8 +195,8 @@ export function glean(options: GraphPluginOptions): GraphVitePlugin {
       // environments (islands run on the client), every source file.
       out = bindComponentRefresh(code, file) ?? out;
 
-      // (1b) Bind `useMutation`/`useSubscription(selector)` to its compiled op name.
-      out = bindSelectorHookOps(out ?? code, file) ?? out;
+      // (1b) Bind `useMutation`/`useSubscription`/server-`mutate`(selector) to its compiled op name.
+      out = bindSelectorHookOps(out ?? code, file, options.serverMutate) ?? out;
 
       // (1c) Read-masking only: bind `useGlean()` to its calling component so the
       // runtime can check reads against that component's compiled read-map.

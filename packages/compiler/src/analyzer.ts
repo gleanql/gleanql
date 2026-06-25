@@ -16,7 +16,7 @@ import type { GraphCompilerBackend } from "./backend.js";
 import { type AstFacade, fileDerivedComponentName, isFunctionLike, typescriptFacade } from "./ast-facade.js";
 import { MutableSelection } from "./mutable.js";
 import { VariablesBuilder } from "./variables.js";
-import { findSelectorHookSites } from "./mutation-binding.js";
+import { findSelectorHookSites, selectorHooks } from "./mutation-binding.js";
 import { compileSelectorOperation, type SelectorCompileContext } from "./selector-compile.js";
 import { type Diagnostic, type DiagnosticCode, messages } from "./diagnostics.js";
 
@@ -26,6 +26,8 @@ export interface AnalyzeInput {
   readonly schema: SchemaModel;
   /** AST primitives. Defaults to the in-process `typescript` engine. */
   readonly ast?: AstFacade;
+  /** Framework server-mutate callee (a mutation selector), e.g. `"mutate"`. */
+  readonly serverMutate?: string;
 }
 
 export interface AnalyzeResult {
@@ -70,7 +72,7 @@ interface Scope {
 export function analyzeFile(input: AnalyzeInput): AnalyzeResult {
   const sf = input.backend.getSourceFile(input.fileName);
   if (!sf) throw new Error(`Source file not found in program: ${input.fileName}`);
-  return new Analyzer(sf, input.backend, input.schema, input.ast ?? typescriptFacade).run();
+  return new Analyzer(sf, input.backend, input.schema, input.ast ?? typescriptFacade, input.serverMutate).run();
 }
 
 class Analyzer {
@@ -89,6 +91,7 @@ class Analyzer {
     private readonly backend: GraphCompilerBackend,
     private readonly schema: SchemaModel,
     private readonly ast: AstFacade,
+    private readonly serverMutate?: string,
   ) {}
 
   run(): AnalyzeResult {
@@ -319,7 +322,7 @@ class Analyzer {
       computeStats: (selection) => this.computeStats(selection),
     };
     const out: OperationArtifact[] = [];
-    for (const site of findSelectorHookSites(this.sf, this.ast)) {
+    for (const site of findSelectorHookSites(this.sf, this.ast, selectorHooks(this.serverMutate))) {
       const rootType = rootTypeFor[site.kind as "mutation" | "subscription"];
       if (!rootType) continue; // schema has no such root
       const artifact = compileSelectorOperation(site, rootType, ctx);

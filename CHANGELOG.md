@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.10 (2026-06-25)
+
+### @gleanql/vite, @gleanql/compiler
+- The server mutation primitive's callee name is now **configurable** via the new
+  `serverMutate` plugin option (e.g. `glean({ serverMutate: 'mutate' })`) instead of
+  Glean hardcoding the name `mutate`. When set, that callee compiles its selector to
+  a mutation operation and the binding transform injects the op name — across the
+  analyzer, the binding, AND file discovery (a file whose only graph usage is a
+  server-mutate call is now discovered and compiled). Unset ⇒ Glean claims no extra
+  name. `selectorHooks(serverMutate?)` is the single source of truth shared by all
+  three. (`integration.mutate` + `runServerMutation` from 0.1.9 are unchanged.)
+
 ## 0.1.9 (2026-06-25)
 
 ### @gleanql/compiler, @gleanql/client, @gleanql/vite

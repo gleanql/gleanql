@@ -1,6 +1,6 @@
 {
   "name": "@gleanql/codegen",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "Glean's schema codegen: introspection to schema model, branded types and graph accessors",
   "license": "MIT",
   "author": "Alexander Liljengard",

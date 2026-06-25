@@ -126,6 +126,15 @@ export interface GraphPluginOptions {
   /** Framework binding (built-in name or a custom {@link FrameworkPreset}). Default `"rwsdk"`. */
   readonly framework?: FrameworkOption;
   /**
+   * The callee name of a framework's SERVER mutation primitive, e.g. `"mutate"`
+   * for `await mutate((m, vars) => m.field(vars)..., vars)` in a server action /
+   * webhook / job. When set, a call to it compiles its selector into a mutation
+   * operation (like `useMutation`) and the binding transform injects the op name;
+   * the framework provides the runtime that executes the compiled op server-side.
+   * Unset ⇒ no server-mutate callee (Glean doesn't claim a name).
+   */
+  readonly serverMutate?: string;
+  /**
    * Host package that transitively provides `@gleanql/client` (and its
    * `@gleanql/core` dep) — e.g. a meta-framework that re-exports the `glean`
    * accessor so consuming apps never declare `@gleanql/client` themselves.
