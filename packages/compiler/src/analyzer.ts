@@ -478,6 +478,16 @@ class Analyzer {
         if (handled && isFunctionLike(this.ast, arg)) continue;
         this.scan(arg, scope, component, stack, route);
       }
+      // A non-graph call (`.filter`/`.join`/`.toUpperCase`/…) is never `consumed`,
+      // and `evalExpr` only ever evaluates its receiver as a graph VALUE —
+      // discarding any field reads buried in a non-graph receiver. So a field read
+      // that lives ONLY inside such a receiver — `[o.a, o.b].filter(Boolean).join()`
+      // or `(cond ? o.a : o.b).trim()` — would silently under-fetch. Walk the
+      // receiver so those reads register. Graph calls are `consumed` (handled), so
+      // this is skipped for them and never double-traces (reads dedupe regardless).
+      if (!handled && this.ast.isPropertyAccessExpression(node.expression)) {
+        this.scan(node.expression.expression, scope, component, stack, route);
+      }
       return;
     }
     if (this.ast.isObjectLiteralExpression(node)) {
