@@ -174,14 +174,20 @@ describe("dev-time regeneration without a fingerprint", () => {
 });
 
 describe("rwsdk preset wiring", () => {
-  it("exposes operationsDigest matching the optimizer define key", async () => {
+  it("excludes the volatile operations module and injects no optimizer define", async () => {
     const { rwsdk } = await vi.importActual<typeof import("../src/presets/index.js")>("../src/presets/index.js");
     const p = rwsdk();
     const operations = ops("abc");
     const digest = p.operationsDigest!(operations);
     const patch = p.viteConfigPatch!(operations);
-    expect(patch.optimizeDeps?.esbuildOptions?.define?.__GLEANQL_OPS_DIGEST__).toBe(JSON.stringify(digest));
-    // a different hash must move the fingerprint
+    // Freshness comes from externalizing the volatile module + volatileModules
+    // hot-swap — NOT an injected define. (Vite 8's Rolldown optimizer rejects a
+    // define in optimizeDeps, and the old esbuildOptions.define is deprecated.)
+    expect(patch.optimizeDeps?.exclude).toContain("@gleanql/client/operations");
+    const od = patch.optimizeDeps as Record<string, unknown>;
+    expect(od.esbuildOptions).toBeUndefined();
+    expect(od.rolldownOptions).toBeUndefined();
+    // operationsDigest still moves when ops change (it drives the hot-swap).
     expect(p.operationsDigest!(ops("abd"))).not.toBe(digest);
   });
 

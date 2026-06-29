@@ -252,7 +252,6 @@ export interface GraphDevServer {
 export interface GraphViteConfigPatch {
   optimizeDeps?: {
     exclude?: string[];
-    esbuildOptions?: { define?: Record<string, string> };
   };
 }
 

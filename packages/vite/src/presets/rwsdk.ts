@@ -22,17 +22,22 @@ export function rwsdk(): FrameworkPreset {
     // the optimizer's cache on the generated operations instead: the define
     // value changes when any operation changes, which changes the optimizer
     // hash and forces a re-prebundle — same ops, warm cache.
-    viteConfigPatch: (operations) => ({
+    viteConfigPatch: () => ({
       optimizeDeps: {
         // The volatile data module stays OUT of the prebundle: generated code
         // reaches it through this exact bare specifier, the optimizer
-        // externalizes it (exclude entries become esbuild externals), and the
-        // module is served as plain source — invalidatable mid-session. The
-        // digest define remains as a belt-and-braces re-key across restarts
-        // for anything that still inlines a copy (e.g. rwsdk's client vendor
-        // barrel, where staleness is tolerated — hydration is snapshot-driven).
+        // externalizes it (exclude entries become externals), and the module is
+        // served as plain source — invalidatable mid-session. This (plus the
+        // `volatileModules` hot-swap below) is what keeps operations fresh.
+        //
+        // We used to also inject a `__GLEANQL_OPS_DIGEST__` define here purely to
+        // re-key the optimizer cache when ops changed (belt-and-braces for copies
+        // that get inlined, e.g. rwsdk's client vendor barrel — staleness there is
+        // tolerated, hydration is snapshot-driven). That rode on `esbuildOptions`,
+        // which Vite 8 deprecated (its optimizer is Rolldown), and Rolldown's
+        // `optimizeDeps.rolldownOptions` rejects `define` — so the define is
+        // dropped. The exclude + volatileModules path already handles freshness.
         exclude: ["@gleanql/client/operations"],
-        esbuildOptions: { define: { __GLEANQL_OPS_DIGEST__: JSON.stringify(opsDigest(operations)) } },
       },
     }),
     operationsDigest: opsDigest,
