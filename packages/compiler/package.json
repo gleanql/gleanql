@@ -1,6 +1,6 @@
 {
   "name": "@gleanql/compiler",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "description": "Glean's static analyzer: compiles accessor-style reads in route files to GraphQL operations",
   "license": "MIT",
   "author": "Alexander Liljengard",
