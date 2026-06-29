@@ -592,6 +592,12 @@ export default [
     "heading": "Shared Param"
   },
   {
+    "href": "/golden-cases#array-literal-receiver",
+    "title": "Golden cases",
+    "group": "Reference",
+    "heading": "Array Literal Receiver"
+  },
+  {
     "href": "/golden-cases#acceptance",
     "title": "Golden cases",
     "group": "Reference",
@@ -967,6 +973,12 @@ export default [
     "title": "@gleanql/vite",
     "group": "Packages",
     "heading": "Framework presets"
+  },
+  {
+    "href": "/vite#re-exporting-from-a-host-framework",
+    "title": "@gleanql/vite",
+    "group": "Packages",
+    "heading": "Re-exporting from a host framework"
   },
   {
     "href": "/vite#generated-glue-thin-shims-over-typed-factories",

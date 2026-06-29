@@ -2153,6 +2153,55 @@ export function getRouteVariables(ctx) {
 }
 ```
 
+## Array Literal Receiver
+
+`36-array-literal-receiver`
+
+**Input — input.tsx**
+
+```tsx
+import { glean } from "~/graph";
+import type { Product } from "~/graph/schema";
+
+export default function ProductRoute({ params }: { params: { handle: string } }) {
+  const product = glean.product({ handle: params.handle });
+  return <ProductSummary product={product} />;
+}
+
+function ProductSummary({ product }: { product: Product }) {
+  // `title` and `descriptionHtml` are read ONLY inside an array literal that is
+  // the receiver of a `.filter().join()` chain. A non-graph call discards its
+  // receiver's graph value, so without walking the receiver these reads would
+  // silently never reach the operation.
+  const summary = [product.title, product.descriptionHtml].filter(Boolean).join(" — ");
+  return <h1>{summary}</h1>;
+}
+```
+
+**Generated GraphQL**
+
+```graphql
+query ProductRoute($handle: String!) {
+  product(handle: $handle) {
+    __typename
+    id
+    title
+    descriptionHtml
+  }
+}
+```
+
+**Read map**
+
+```json
+{
+  "ProductSummary": [
+    "Product.title",
+    "Product.descriptionHtml"
+  ]
+}
+```
+
 ## Acceptance
 
 `acceptance`
@@ -2233,4 +2282,4 @@ query ProductRoute($handle: String!) {
 
 ---
 
-36 fixtures. This page regenerates from the fixtures on every build.
+37 fixtures. This page regenerates from the fixtures on every build.
