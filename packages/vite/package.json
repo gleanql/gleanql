@@ -22,8 +22,8 @@
     "dist"
   ],
   "scripts": {
-    "build": "NODE_OPTIONS=--max-old-space-size=4096 tsdown src/index.ts --format esm --dts.eager",
-    "prepare": "NODE_OPTIONS=--max-old-space-size=4096 tsdown src/index.ts --format esm --dts.eager"
+    "build": "tsdown src/index.ts --format esm --dts.eager",
+    "prepare": "tsdown src/index.ts --format esm --dts.eager"
   },
   "dependencies": {
     "esbuild": "^0.25.0",
