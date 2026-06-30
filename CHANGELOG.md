@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.14
+
+### @gleanql/compiler, @gleanql/client, @gleanql/vite, @gleanql/core
+Render-time ("two-sweep") root arguments. A glean root read whose argument is
+computed *during* render — e.g. `glean.nodes({ ids: services.map(s => s.productId) })`
+after an `await` — is no longer forced through the `getXVariables(ctx)` preload
+factory (which produced invalid JS / referenced out-of-scope locals). The
+compiler now keeps the `$var` in the document, marks the operation `deferred`,
+and omits the var from the factory; the runtime executes that root at the read
+call-site with the supplied args (`runtime.resolveRoot` + `resolveDeferredRoot`,
+reusing the pagination runtime-variable machinery) and seeds the cache. `ctx`
+becomes one variable source (known before render) alongside the render scope
+(known during it). `__typename` narrowing is unaffected. Server/RSC integration
+wired; the underlying primitives are general. See `docs/compiler.md`.
+
 ## 0.1.10 (2026-06-25)
 
 ### @gleanql/vite, @gleanql/compiler

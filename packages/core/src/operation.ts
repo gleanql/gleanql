@@ -27,6 +27,18 @@ export interface OperationArtifact {
   readonly selection: SelectionSet;
   /** The operation's variable definitions — drives generated `variables` types. */
   readonly variableDefs?: readonly { readonly name: string; readonly type: string }[];
+  /**
+   * True when one or more root reads take arguments computed at render time
+   * (the "two-sweep" pattern), so they cannot be preloaded from `ctx` and must
+   * execute at the call site with the supplied args. See `runtimeVars`.
+   */
+  readonly deferred?: boolean;
+  /**
+   * Names of the operation variables ($vars) that are supplied at the render
+   * call-site rather than by the `getXVariables(ctx)` preload factory. The
+   * factory omits these; the runtime binds them from the in-render call args.
+   */
+  readonly runtimeVars?: readonly string[];
   /** Originating route/module file. */
   readonly source?: string;
   readonly stats: OperationStats;

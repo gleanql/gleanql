@@ -115,6 +115,38 @@ export function getProductRouteVariables(ctx) {
 }
 ```
 
+**Render-time ("two-sweep") — args computed during render**
+
+When a root arg references an *in-render* binding (or a module import) — anything
+not derivable from route params/context — the value isn't known at preload time,
+so it can't go in the `ctx` factory. The compiler keeps the `$var` in the
+document, marks the operation `deferred`, and **omits the var from the factory**;
+the runtime executes that root at the read call-site with the value the read
+proxy already receives, then seeds the cache (Suspense). This is the "two-sweep"
+pattern — fetch your own data first, then GraphQL keyed by it:
+
+```tsx
+export default async function Bookings() {
+  const services = await listServices();              // sweep 1: your DB
+  const ids = services.map((s) => s.productId);
+  const products = glean.nodes({ ids });              // sweep 2: glean, runtime args
+  products.forEach((n) => {
+    if (n.__typename === "Product") { /* n.title, n.featuredMedia… */ }
+  });
+}
+
+// $nodes_ids stays in the document; the factory is empty (no ctx entry):
+export function getBookingsVariables(ctx) {
+  return {};
+}
+```
+
+`ctx` is simply the variable source known *before* render; the render scope is the
+source known *during* it. Both are first-class. (The `__typename` narrowing is
+independent of where the args come from — see [Interfaces & unions](#interfaces--unions).)
+Today this resolves on the server (RSC) via the integration; the underlying
+primitive (`runtime.resolveRoot` + `resolveDeferredRoot`) is general.
+
 ## Dynamic components (tiers)
 
 | Tier | Handling |

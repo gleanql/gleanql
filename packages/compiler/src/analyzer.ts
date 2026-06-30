@@ -270,6 +270,7 @@ class Analyzer {
       selection: mergeSelectionSets([rootSel.toIR()], this.schema, { isRoot: true }),
     };
     const document = printOperation(ir);
+    const deferred = vars.deferred;
     return {
       name: comp.name,
       kind: "query",
@@ -281,6 +282,7 @@ class Analyzer {
       variableDefs: ir.variables,
       source: this.sf.fileName,
       stats: this.computeStats(ir.selection),
+      ...(deferred.length ? { deferred: true, runtimeVars: deferred } : {}),
     };
   }
 

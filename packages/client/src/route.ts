@@ -20,6 +20,12 @@ export interface CompiledOperation<RouteContext = unknown, TVariables = Record<s
   readonly readMap?: Record<string, readonly string[]>;
   /** Merged selection tree; enables cache-first resolution when present. */
   readonly selection?: SelectionSet;
+  /** True when one or more root reads take render-time ("two-sweep") args; those
+   * roots are executed at the call-site, not preloaded from ctx. See `runtimeVars`. */
+  readonly deferred?: boolean;
+  /** Operation variables ($vars) supplied at the render call-site (the factory
+   * omits them); used to prune the eager preload + identify deferred roots. */
+  readonly runtimeVars?: readonly string[];
 }
 
 export interface RunRouteOptions {

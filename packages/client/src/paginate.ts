@@ -13,6 +13,7 @@ import {
   responseKeyCandidates,
   toArgMap,
   createGraphProxy,
+  type FieldValue,
   type GraphClientAdapter,
   type GraphPagePointer,
   type GraphRef,
@@ -88,6 +89,79 @@ interface PageableOp {
   readonly name: string;
   readonly document: string;
   readonly selection?: SelectionSet;
+}
+
+/**
+ * Execute a single deferred ("two-sweep") root read with args computed at the
+ * render call-site, and seed the cache — the runtime half of the deferred-args
+ * feature. Reuses the pagination machinery (`buildPageOperation` builds a
+ * single-root operation from the compiled selection, turning the call-site args
+ * into `$vars` with schema-derived types) but seeds the result as a fresh root
+ * (`seedResult`) instead of appending a connection page. Pure — exported for
+ * testing. The caller (the bound-graph deferred branch) wraps this in
+ * `runtime.resolveRoot(...)` for Suspense de-dup + resume.
+ */
+export async function resolveDeferredRoot(params: {
+  readonly op: PageableOp;
+  readonly rootField: string;
+  readonly args: Record<string, unknown>;
+  readonly schema: SchemaModel;
+  readonly adapter: GraphClientAdapter;
+  readonly runtime: GraphRuntime;
+  readonly context: GraphRequestContext;
+}): Promise<{ ok: boolean; roots?: Record<string, FieldValue>; error?: string }> {
+  const { op, rootField, args, schema, adapter, runtime, context } = params;
+  const trail: PathStep[] = [{ name: rootField, args }];
+  const built = buildPageOperation(op, trail, args, schema);
+  if (!built) return { ok: false };
+
+  let result;
+  try {
+    result = await adapter.execute({ name: built.name, kind: "query", document: built.document }, args, context);
+  } catch (err) {
+    return { ok: false, error: errorMessage(err) };
+  }
+  if (result?.errors?.length) return { ok: false, error: result.errors[0]!.message };
+  const roots = result?.data ? runtime.seedResult(result.data as Record<string, unknown>) : {};
+  return { ok: true, roots };
+}
+
+/**
+ * Split a deferred operation into the part that can be preloaded eagerly from
+ * `ctx` and the set of root fields whose args are render-time (`runtimeVars`).
+ * Returns a pruned eager op (only the non-deferred roots, with just the vars they
+ * still use) — `undefined` when no eager roots remain (a pure two-sweep route) —
+ * plus the deferred root field names. Pure — exported for testing.
+ */
+export function splitDeferredRoots(
+  op: { name: string; document: string; selection?: SelectionSet },
+  runtimeVars: ReadonlySet<string>,
+): { eager?: { name: string; kind: "query"; document: string; selection: SelectionSet }; deferredRoots: Set<string> } {
+  const deferredRoots = new Set<string>();
+  const eagerFields: FieldSelection[] = [];
+  for (const f of op.selection?.fields ?? []) {
+    const vars = new Set<string>();
+    for (const [, v] of f.args ?? []) collectArgValueVars(v, vars);
+    if ([...vars].some((v) => runtimeVars.has(v))) deferredRoots.add(f.name);
+    else eagerFields.push(f);
+  }
+  if (eagerFields.length === 0 || !op.selection) return { deferredRoots };
+
+  const selection: SelectionSet = { typeName: op.selection.typeName, fields: eagerFields };
+  const used = collectVarNames(selection);
+  const variables = parseVariableDefs(op.document).filter((v) => used.has(v.name));
+  const name = `${op.name}_eager`;
+  return {
+    eager: { name, kind: "query", document: printOperation({ kind: "query", name, variables, selection }), selection },
+    deferredRoots,
+  };
+}
+
+/** Variable names referenced in a single arg value (non-recursive into selections). */
+function collectArgValueVars(v: ArgValue, out: Set<string>): void {
+  if (v.kind === "var") out.add(v.name);
+  else if (v.kind === "list") v.items.forEach((i) => collectArgValueVars(i, out));
+  else if (v.kind === "object") v.fields.forEach(([, vv]) => collectArgValueVars(vv, out));
 }
 
 export interface PaginateConnectionParams {

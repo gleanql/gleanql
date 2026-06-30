@@ -252,6 +252,19 @@ export interface BindGraphOptions {
    * the server/isomorphic accessor omits it.
    */
   readonly tracker?: Set<string>;
+  /**
+   * Root fields whose args are computed at the render call-site ("two-sweep").
+   * They aren't preloaded; the callable executes them on demand via
+   * {@link BindGraphOptions.resolveDeferredRoot}.
+   */
+  readonly deferredRoots?: ReadonlySet<string>;
+  /**
+   * Execute a deferred root with its call-site args and return the seeded value
+   * (a ref, or an array of refs for a list root). Suspends (throws a promise)
+   * until the fetch+seed completes, then returns synchronously on retry. Wired by
+   * the integration over `runtime.resolveRoot` + `resolveDeferredRoot`.
+   */
+  readonly resolveDeferredRoot?: (rootField: string, args: Record<string, unknown> | undefined) => FieldValue;
 }
 
 export function bindGraph(options: BindGraphOptions): BoundGraph {
@@ -266,10 +279,24 @@ export function bindGraph(options: BindGraphOptions): BoundGraph {
   const graph: Record<string, (args?: Record<string, unknown>) => unknown> = {};
   for (const [fieldName, fieldDef] of Object.entries(rootFields)) {
     graph[fieldName] = (args?: Record<string, unknown>) => {
+      const trail: PathStep[] = [{ name: fieldName, ...(args ? { args } : {}) }];
+
+      // Deferred ("two-sweep") root: args are only known at the render call-site,
+      // so execute on demand (suspends until fetched + seeded) instead of reading
+      // a preloaded root. This replaces the silent empty-array fallback below for
+      // deferred list roots — `glean.nodes({ ids }).map(...)` fetches, not yields [].
+      if (options.deferredRoots?.has(fieldName) && options.resolveDeferredRoot) {
+        const seededDeferred = options.resolveDeferredRoot(fieldName, args);
+        if (fieldDef.list) {
+          const items = Array.isArray(seededDeferred) ? seededDeferred : [];
+          return items.map((item) => wrap(binding, item, fieldDef.type, trail));
+        }
+        return wrap(binding, seededDeferred, fieldDef.type, trail);
+      }
+
       const rootsNow =
         typeof options.roots === "function" ? options.roots() : options.roots;
       const seeded = rootsNow?.[fieldName];
-      const trail: PathStep[] = [{ name: fieldName, ...(args ? { args } : {}) }];
       // A list root (`type Query { todos: [Todo!] }`) seeds an array of refs — wrap
       // each as a child proxy so `glean.todos().map(...)` works without an object
       // wrapper. Unseeded (pre-hydration / not yet fetched) -> empty array; the
