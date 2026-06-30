@@ -5,6 +5,7 @@ import {
   invalidateValue,
   runRoute,
   runServerMutation,
+  toArgMap,
   type MutationResult,
   type BoundGraph,
   type BoundMutations,
@@ -18,7 +19,8 @@ import {
   type MissingFieldRead,
   type MissingFieldResult,
 } from "./index.js";
-import type { SchemaModel } from "@gleanql/core";
+import { resolveDeferredRoot as runDeferredRoot, splitDeferredRoots } from "./paginate.js";
+import { canonicalArgs, type SchemaModel } from "@gleanql/core";
 import { buildRouteContext, type BuildRouteContextOptions, type GraphRouteContext, type RequestInfo } from "./context.js";
 
 /**
@@ -133,14 +135,65 @@ export function createGraphIntegration<Ctx extends Record<string, unknown> = Rec
 
     const requestContext = buildRouteContext(requestInfo, options);
     const runtime = makeRuntime(requestContext);
-    const { variables, roots, errors } = await runRoute({
-      operation,
-      routeContext: requestContext,
-      adapter: options.adapter,
-      context: requestContext,
-      runtime,
+
+    // Two-sweep: preload only the ctx-derivable roots; render-time roots execute
+    // at the call-site (resolveDeferredRoot below). A pure two-sweep route has no
+    // eager roots to preload at all.
+    let variables: Record<string, unknown>;
+    let roots: Record<string, FieldValue>;
+    let errors: ReadonlyArray<{ message: string }> | undefined;
+    let deferredRoots: ReadonlySet<string> | undefined;
+
+    if (operation.deferred) {
+      const split = splitDeferredRoots(operation, new Set(operation.runtimeVars ?? []));
+      deferredRoots = split.deferredRoots;
+      if (split.eager) {
+        const eagerOp: CompiledOperation<GraphRouteContext> = {
+          ...operation,
+          name: split.eager.name,
+          document: split.eager.document,
+          selection: split.eager.selection,
+        };
+        const r = await runRoute({ operation: eagerOp, routeContext: requestContext, adapter: options.adapter, context: requestContext, runtime });
+        ({ variables, roots, errors } = r);
+      } else {
+        variables = operation.variables(requestContext); // ctx vars only (factory omits deferred)
+        roots = {};
+      }
+    } else {
+      const r = await runRoute({ operation, routeContext: requestContext, adapter: options.adapter, context: requestContext, runtime });
+      ({ variables, roots, errors } = r);
+    }
+
+    // The deferred-root executor: fetch a render-time root with its call-site
+    // args (suspends via runtime.resolveRoot, seeds, then resolves to the ref(s)).
+    const resolveDeferred = operation.deferred
+      ? (rootField: string, args: Record<string, unknown> | undefined): FieldValue => {
+          const key = `${rootField}(${canonicalArgs(toArgMap(args ?? {}))})`;
+          const seededRoots = runtime.resolveRoot(key, async () => {
+            const res = await runDeferredRoot({
+              op: operation,
+              rootField,
+              args: args ?? {},
+              schema: options.schema,
+              adapter: options.adapter,
+              runtime,
+              context: requestContext,
+            });
+            if (!res.ok && res.error) throw new Error(res.error);
+            return res.roots ?? {};
+          });
+          return seededRoots[rootField];
+        }
+      : undefined;
+
+    const graph = bindGraph({
+      schema: options.schema,
+      getRuntime: () => runtime,
+      roots,
+      ...(deferredRoots ? { deferredRoots } : {}),
+      ...(resolveDeferred ? { resolveDeferredRoot: resolveDeferred } : {}),
     });
-    const graph = bindGraph({ schema: options.schema, getRuntime: () => runtime, roots });
     const mutate = createMutator({ operations: options.operations, adapter: options.adapter, runtime, context: requestContext });
 
     const active: ActiveRequestGraph = {

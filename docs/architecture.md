@@ -94,6 +94,17 @@ The compiler is authoritative for the *initial* operation. The runtime may fetch
 
 v1 implements `hybrid` and exposes `unexpectedMissingField: "allow" | "warn" | "error"` on the runtime to select the others.
 
+The same compiler-vs-runtime split applies to a root read's **variables**, not just
+its fields. A variable derivable from route params/context is computed by the
+preload factory `getXVariables(ctx)` *before* render. A variable computed *during*
+render (the "two-sweep" pattern: fetch your own data, then GraphQL keyed by it) is
+marked `deferred`: it stays in the document but is omitted from the factory, and
+the runtime executes that root at the read call-site with the render-time value
+(via `runtime.resolveRoot` + `resolveDeferredRoot`, the same runtime-variable
+machinery pagination uses), then seeds the cache. So `ctx` is just the variable
+source known early; the render scope is the source known mid-render. See
+[compiler.md](./compiler.md#variables--argument-capture).
+
 ## The backend seam
 
 The analyzer walks the TypeScript AST for *structure*. It routes every *type/symbol* question through `GraphCompilerBackend`. The default backend ships a real `ts.Program` + `TypeChecker`. The seam is the only contact point for type info, so a Go-based engine (tsgo / `@typescript/native-preview`) plugs in without touching analysis logic. It already does, as an experimental `backend` option.

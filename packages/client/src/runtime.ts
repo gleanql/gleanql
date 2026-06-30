@@ -48,6 +48,7 @@ interface PendingEntry {
 export class GraphRuntime {
   readonly cache: GraphCache;
   private readonly pending = new Map<string, PendingEntry>();
+  private readonly resolvedRoots = new Map<string, Record<string, FieldValue>>();
   private queue: MissingFieldRead[] = [];
   private flushScheduled = false;
 
@@ -70,6 +71,39 @@ export class GraphRuntime {
     this.pending.set(pkey, entry);
     this.queue.push({ ref, fieldKey });
     this.scheduleFlush();
+    throw entry.promise;
+  }
+
+  /**
+   * Suspense primitive for a render-time ("two-sweep") root read: run `exec`
+   * once per `key` (it fetches the root with the call-site args and seeds the
+   * cache), throwing its promise until it resolves, then return the seeded root
+   * refs. Mirrors `readField`'s pending/throw/resume, keyed by the root field +
+   * its args. Because `exec` SEEDS before resolving, every subsequent field read
+   * on the returned refs is a cache hit — so a deferred root's fields never reach
+   * `reportMiss` (they aren't "unexpected" misses).
+   */
+  resolveRoot(key: string, exec: () => Promise<Record<string, FieldValue>>): Record<string, FieldValue> {
+    const done = this.resolvedRoots.get(key);
+    if (done) return done;
+
+    const pkey = `@root:${key}`;
+    const existing = this.pending.get(pkey);
+    if (existing) throw existing.promise; // dedupe in-flight / stable across retries
+
+    const entry = this.makeDeferred();
+    this.pending.set(pkey, entry);
+    exec().then(
+      (roots) => {
+        this.resolvedRoots.set(key, roots);
+        this.pending.delete(pkey);
+        entry.resolve();
+      },
+      (error) => {
+        this.pending.delete(pkey);
+        entry.reject(error);
+      },
+    );
     throw entry.promise;
   }
 

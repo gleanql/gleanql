@@ -17,6 +17,19 @@ export interface LiftedVariable {
   readonly type: string;
 }
 
+/**
+ * Identifiers that are always available wherever a variables factory runs, so an
+ * arg referencing only these (plus route params) stays ctx-derivable (preloaded).
+ * Anything else (an in-render local, a module import) makes the arg a render-time
+ * "deferred" variable, executed at the call-site instead.
+ */
+const KNOWN_GLOBALS = new Set<string>([
+  "Math", "JSON", "Number", "String", "Boolean", "Array", "Object", "Date",
+  "parseInt", "parseFloat", "isNaN", "isFinite", "BigInt", "Symbol",
+  "undefined", "NaN", "Infinity", "encodeURIComponent", "decodeURIComponent",
+  "btoa", "atob", "structuredClone",
+]);
+
 interface FactoryEntry {
   readonly varName: string;
   readonly valueSource: string;
@@ -26,6 +39,7 @@ export class VariablesBuilder {
   private readonly vars: LiftedVariable[] = [];
   private readonly entries: FactoryEntry[] = [];
   private readonly locals = new Map<string, string>();
+  private readonly deferredVars = new Set<string>();
 
   constructor(
     private readonly routeName: string,
@@ -59,6 +73,21 @@ export class VariablesBuilder {
       return { kind: "var", name: varName };
     }
 
+    // Render-time ("two-sweep") argument: it references an in-render binding (a
+    // `const` computed during render) or a module import, neither of which the
+    // ctx preload factory can reproduce (the factory only has `ctx`, runs before
+    // render, and can't re-run an `await`). Allocate the $var so the document
+    // still declares it, mark it deferred, and emit NO factory entry — the
+    // runtime executes this root at the call-site with the args the read proxy
+    // already received. `ctx` is just the variable source that's known early;
+    // this is the source that's only known mid-render.
+    if (!this.isCtxDerivable(effective)) {
+      const varName = `${rootField}_${argName}`;
+      this.addVar(varName, argType);
+      this.deferredVars.add(varName);
+      return { kind: "var", name: varName };
+    }
+
     // Complex argument: lift under a root-prefixed name. When it flows through a
     // route-local const, reproduce that local and reference it; otherwise inline
     // the (context-substituted) source.
@@ -81,6 +110,11 @@ export class VariablesBuilder {
 
   get exportName(): string {
     return `get${this.routeName}Variables`;
+  }
+
+  /** Variable names supplied at the render call-site (omitted from the factory). */
+  get deferred(): readonly string[] {
+    return [...this.deferredVars];
   }
 
   buildSource(): string {
@@ -118,6 +152,59 @@ export class VariablesBuilder {
       return this.isPureContextPath(expr.expression);
     }
     return false;
+  }
+
+  /** True when every free identifier in `expr` is a route param or a known global
+   * — i.e. the value can be reproduced in the `getXVariables(ctx)` preload factory.
+   * A free reference to anything else (an in-render local, a module import) means
+   * the arg is only knowable at the render call-site → it must be deferred. */
+  private isCtxDerivable(expr: ts.Expression): boolean {
+    for (const id of this.freeIdentifiers(expr)) {
+      if (this.paramNames.includes(id)) continue;
+      if (KNOWN_GLOBALS.has(id)) continue;
+      return false;
+    }
+    return true;
+  }
+
+  /** Identifiers referenced as *values* in `expr` — excluding property names,
+   * object-literal keys, and names bound by nested functions/arrows within it. */
+  private freeIdentifiers(expr: ts.Expression): Set<string> {
+    const free = new Set<string>();
+    const collectBound = (name: ts.Node, set: Set<string>): void => {
+      if (this.ast.isIdentifier(name)) {
+        set.add(name.text);
+        return;
+      }
+      this.ast.forEachChild(name, (c) => collectBound(c, set)); // binding patterns
+    };
+    const walk = (node: ts.Node, bound: ReadonlySet<string>): void => {
+      if (this.ast.isPropertyAccessExpression(node)) {
+        walk(node.expression, bound); // `a.b` references `a`, not `b`
+        return;
+      }
+      if (this.ast.isPropertyAssignment(node)) {
+        walk(node.initializer, bound); // `{ key: value }` — key is not a reference
+        return;
+      }
+      if (this.ast.isShorthandPropertyAssignment(node)) {
+        if (!bound.has(node.name.text)) free.add(node.name.text); // `{ x }` references x
+        return;
+      }
+      if (this.ast.isArrowFunction(node) || this.ast.isFunctionExpression(node)) {
+        const inner = new Set(bound);
+        for (const param of (node as ts.ArrowFunction).parameters) collectBound(param.name, inner);
+        walk((node as ts.ArrowFunction).body, inner); // body only; params are bound
+        return;
+      }
+      if (this.ast.isIdentifier(node)) {
+        if (!bound.has(node.text)) free.add(node.text);
+        return;
+      }
+      this.ast.forEachChild(node, (c) => walk(c, bound));
+    };
+    walk(expr, new Set());
+    return free;
   }
 
   /** Print an expression with route-param identifiers rewritten to `ctx.<param>`. */

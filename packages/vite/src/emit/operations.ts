@@ -23,7 +23,9 @@ export function genOperationsJs(
       `  ${JSON.stringify(name)}: { name: ${JSON.stringify(op.name)}, kind: ${JSON.stringify(op.kind)}, ` +
         `document: ${JSON.stringify(op.document)}, hash: ${JSON.stringify(op.hash)}, ` +
         `variables: ${op.variablesFactory.exportName}, readMap: ${JSON.stringify(op.readMap)}, ` +
-        `selection: ${JSON.stringify(op.selection)} },`,
+        `selection: ${JSON.stringify(op.selection)}` +
+        (op.deferred ? `, deferred: true, runtimeVars: ${JSON.stringify(op.runtimeVars)}` : ``) +
+        ` },`,
     );
   }
   // Only emitted when read-masking is on — the mask is a dev diagnostic, not

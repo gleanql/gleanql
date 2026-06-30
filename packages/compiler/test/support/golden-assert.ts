@@ -36,4 +36,15 @@ export function assertFixture(result: AnalyzeResult, dir: string): void {
     const actual = result.diagnostics.map((d) => ({ code: d.code, message: d.message }));
     expect(actual).toEqual(JSON.parse(expectedDiagnostics));
   }
+
+  // Optional: assert the deferred/two-sweep flags on the first operation.
+  const expectedMeta = readExpected(dir, "expected.meta.json");
+  if (expectedMeta !== undefined) {
+    const meta = JSON.parse(expectedMeta) as { deferred?: boolean; runtimeVars?: string[] };
+    const op = result.operations[0];
+    if (meta.deferred !== undefined) expect(op?.deferred ?? false).toBe(meta.deferred);
+    if (meta.runtimeVars !== undefined) {
+      expect([...(op?.runtimeVars ?? [])].sort()).toEqual([...meta.runtimeVars].sort());
+    }
+  }
 }

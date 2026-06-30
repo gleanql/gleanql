@@ -1,0 +1,10 @@
+{
+  "ProductCard": [
+    "Product.title",
+    "Product.featuredImage.url"
+  ],
+  "CollectionCard": [
+    "Collection.title",
+    "Collection.image.url"
+  ]
+}
