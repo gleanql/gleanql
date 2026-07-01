@@ -49,7 +49,7 @@ function renderTypeBlock(type: IntrospectionType, ctx: Ctx): string | undefined 
     case "OBJECT":
       return renderObjectLike(type, ctx, JSON.stringify(type.name));
     case "INTERFACE":
-      return renderObjectLike(type, ctx, typenameUnionOf(type));
+      return renderInterface(type, ctx);
     case "UNION":
       return renderUnion(type);
     case "ENUM":
@@ -80,6 +80,24 @@ function renderUnion(type: IntrospectionType): string {
   const members = (type.possibleTypes ?? []).map((p) => namedTypeName(p));
   const body = members.length > 0 ? members.join(" | ") : "never";
   return `export type ${type.name} = ${body};`;
+}
+
+/**
+ * An interface is narrowable: render it as the union of its possible types, so a
+ * `x.__typename === "Product"` guard refines the value to the concrete type and
+ * its fields (`x.title`) become accessible — the shape GraphQL selections on an
+ * interface root (`nodes(ids:) { ... on Product { title } }`) actually return.
+ * Each implementer already carries every interface field (introspection includes
+ * inherited fields on each object type), so common-field access (`x.id`) is
+ * preserved across the union. Falls back to a thin interface when no possible
+ * types surface (e.g. a schema exposing an interface no type implements).
+ */
+function renderInterface(type: IntrospectionType, ctx: Ctx): string {
+  const members = (type.possibleTypes ?? [])
+    .map((p) => namedTypeName(p))
+    .filter((name) => !isInternalType(name));
+  if (members.length === 0) return renderObjectLike(type, ctx, typenameUnionOf(type));
+  return `export type ${type.name} = ${members.join(" | ")};`;
 }
 
 function renderEnum(type: IntrospectionType): string {

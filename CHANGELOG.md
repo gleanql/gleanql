@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.1.15
+
+### @gleanql/client
+`await glean.x({…})` in non-React server handlers. A deferred ("two-sweep") root
+read is now **isomorphic**: the same call site suspends in a React render *and*
+resolves when `await`ed in a plain handler (webhook, job, proxy, API route), so
+those handlers fetch through the compiler instead of a raw `graphql()` string. The
+bound graph returns a deferred root as a value that is both directly readable
+(Suspense) and awaitable; `runtime.resolveRootAsync` is the async twin of
+`resolveRoot`, sharing the request cache and in-flight map so an `await` and a
+concurrent render read of the same root+args dedupe to one fetch. A graph proxy now
+reports no `then`, so awaiting an already-seeded root (or returning a graph value
+from an `async` handler) is a safe pass-through rather than a `.then` probe that
+suspends. A failed `await` rejects cleanly — the internal dedup barrier no longer
+leaks an unhandled rejection. See `docs/runtime.md` and `docs/compiler.md`.
+
+### @gleanql/codegen
+Interfaces render as the **union of their implementers** (`type Node = Product |
+Collection`) instead of a thin `interface Node { __typename; id }`. Common fields
+stay accessible across the union and a `__typename` guard narrows to the concrete
+type — the shape a selection on an interface root actually returns, which makes
+`await glean.node({ id })` narrowable in a handler. See `docs/codegen.md`.
+
 ## 0.1.14
 
 ### @gleanql/compiler, @gleanql/client, @gleanql/vite, @gleanql/core
