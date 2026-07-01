@@ -167,6 +167,16 @@ Suspense promise) and `runtime.resolveRootAsync` (async, resolves) — and the b
 graph exposes a deferred root as a value that is both directly readable and
 awaitable. See [runtime → Reads outside React](runtime.md#reads-outside-react-await).
 
+The compiler sees through the `await` (like `(expr)` and `expr!`) to follow the
+reads on the resolved value, so `const o = await glean.order({ id }); o.name` and
+the un-awaited form compile identically. Two constraints, same as any read: **read
+where the root is read** — put the `glean.x()` call in the handler (a call-site
+argument is what makes it deferred), and hand a reshaping helper the resolved graph
+*value* (`format(o)`), never the id (`format(id)` reads nothing the compiler can
+follow, so it can't trace the fields). And prefer `list.map(…)` over `(list ?? [])
+.map(…)`: the `?? []` hides the list behind an expression the map-flow doesn't
+descend, dropping the callback's reads.
+
 ## Dynamic components (tiers)
 
 | Tier | Handling |

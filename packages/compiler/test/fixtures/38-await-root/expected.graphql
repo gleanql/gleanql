@@ -1,0 +1,7 @@
+query Route($cart_id: ID!) {
+  cart(id: $cart_id) {
+    __typename
+    id
+    totalQuantity
+  }
+}

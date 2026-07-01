@@ -92,6 +92,7 @@ function makeFacade(ast: Any): AstFacade {
     isConditionalExpression: ast.isConditionalExpression,
     isParenthesizedExpression: ast.isParenthesizedExpression,
     isNonNullExpression: ast.isNonNullExpression,
+    isAwaitExpression: ast.isAwaitExpression,
     isBinaryExpression: ast.isBinaryExpression,
     isArrowFunction: ast.isArrowFunction,
     isFunctionExpression: ast.isFunctionExpression,

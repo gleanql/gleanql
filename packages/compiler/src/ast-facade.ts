@@ -26,6 +26,7 @@ export interface AstFacade {
   isConditionalExpression(n: ts.Node): n is ts.ConditionalExpression;
   isParenthesizedExpression(n: ts.Node): n is ts.ParenthesizedExpression;
   isNonNullExpression(n: ts.Node): n is ts.NonNullExpression;
+  isAwaitExpression(n: ts.Node): n is ts.AwaitExpression;
   isBinaryExpression(n: ts.Node): n is ts.BinaryExpression;
   isArrowFunction(n: ts.Node): n is ts.ArrowFunction;
   isFunctionExpression(n: ts.Node): n is ts.FunctionExpression;
@@ -132,6 +133,7 @@ export const typescriptFacade: AstFacade = {
   isConditionalExpression: ts.isConditionalExpression,
   isParenthesizedExpression: ts.isParenthesizedExpression,
   isNonNullExpression: ts.isNonNullExpression,
+  isAwaitExpression: ts.isAwaitExpression,
   isBinaryExpression: ts.isBinaryExpression,
   isArrowFunction: ts.isArrowFunction,
   isFunctionExpression: ts.isFunctionExpression,

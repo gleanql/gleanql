@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.1.16
+
+### @gleanql/compiler
+Trace field reads on an `await`ed root binding. `const o = await glean.order({ id });
+o.name…` now compiles the same operation as the un-awaited `const o =
+glean.order({ id })` — the analyzer sees through the `await` (as it already does for
+`(expr)` and `expr!`), so the reads on `o` register instead of silently
+under-fetching to `order { __typename id }`. This is the compiler half of the
+isomorphic accessor: 0.1.15 made the runtime resolve `await glean.x()` in a
+non-React handler (webhook / job / proxy / API route), but the compiler wasn't
+following the reads on the resolved value, so real handlers under-fetched. Reads
+still have to be reachable from where the root is read — inline the `glean.x()` call
+in the handler (a call-site argument makes it deferred) and pass the resolved graph
+*value* to any reshaping helper, not an id. `@gleanql/vite` re-bundles the compiler,
+so a Vite build picks the fix up. See `docs/compiler.md`.
+
 ## 0.1.15
 
 ### @gleanql/client
