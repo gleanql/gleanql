@@ -78,14 +78,25 @@ export function resolveRuntimeSources(appRoot: string, clientFrom?: string): Run
   // deps from the app manifest, but Node resolution from the host's realpath'd
   // package.json reaches them).
   const hostRoot = clientFrom ? packageRootOf(appManifest, clientFrom) : undefined;
-  const clientRoot =
-    packageRootOf(appManifest, "@gleanql/client") ??
-    (hostRoot ? packageRootOf(path.join(fs.realpathSync(hostRoot), "package.json"), "@gleanql/client") : undefined);
+  // Resolve a PRISTINE client root — one that still ships `.ts` sources. App-level
+  // resolution can land on the SELF-PROVISIONED `@gleanql/client` we wrote on an
+  // earlier build (transpiled `.js`, no `.ts`), which shadows the real installed
+  // package. Provisioning FROM that shadow would freeze the runtime at whatever
+  // version was first provisioned, so an in-place `@gleanql/client` UPGRADE would
+  // silently keep shipping the OLD runtime (a fresh compiler + stale runtime =
+  // deferred-op/runtime mismatch). Skip the shadow and fall through to the host
+  // (framework) package that re-exports the accessor, which resolves the real
+  // upgraded copy.
+  const clientRoot = pickPristine([
+    packageRootOf(appManifest, "@gleanql/client"),
+    hostRoot ? packageRootOf(path.join(fs.realpathSync(hostRoot), "package.json"), "@gleanql/client") : undefined,
+  ]);
   // @gleanql/core is usually NOT a direct app dependency — resolve it THROUGH the
-  // client package, which declares it.
-  const coreRoot =
-    packageRootOf(appManifest, "@gleanql/core") ??
-    (clientRoot ? packageRootOf(path.join(fs.realpathSync(clientRoot), "package.json"), "@gleanql/core") : undefined);
+  // (pristine) client package, which declares it. Same shadow concern applies.
+  const coreRoot = pickPristine([
+    packageRootOf(appManifest, "@gleanql/core"),
+    clientRoot ? packageRootOf(path.join(fs.realpathSync(clientRoot), "package.json"), "@gleanql/core") : undefined,
+  ]);
   const client = installedSource(appRoot, "@gleanql/client", clientRoot);
   const core = installedSource(appRoot, "@gleanql/core", coreRoot);
   if (!core || !client) {
@@ -115,10 +126,13 @@ function stashDir(appRoot: string, name: string, version: string): string {
 }
 
 /**
- * The `src/` to provision a package from: the pristine installed package
- * (stashed aside first — provisioning is about to replace it), else the newest
- * existing stash (a previous run already replaced the package; an upgrade
- * reinstalls a pristine copy, which re-stashes).
+ * The `src/` to provision a package from: the pristine installed package's sources,
+ * stashed aside under a VERSION-keyed slot first (provisioning is about to replace
+ * the in-root package). The caller must pass a PRISTINE `root` (see `pickPristine`)
+ * — provisioning must never read the self-provisioned copy, or a version bump would
+ * be frozen. Falls back to the newest existing stash only when no pristine root
+ * resolved (best-effort; may be stale — that path should not be reached once a host
+ * `clientFrom` is configured).
  */
 function installedSource(appRoot: string, name: string, root: string | undefined): string | undefined {
   if (root) {
@@ -148,6 +162,25 @@ function installedSource(appRoot: string, name: string, root: string | undefined
     .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs)[0];
   const reused = newest ? path.join(newest, "src") : undefined;
   return reused && fs.existsSync(path.join(reused, "index.ts")) ? reused : undefined;
+}
+
+/** True when `root` still ships TypeScript sources — i.e. it is a real installed
+ * package, not the transpiled copy we self-provision into `node_modules/@gleanql/*`
+ * (whose `src/` holds `.js` + `.d.ts`, never `.ts`). */
+function hasTsSource(root: string): boolean {
+  try {
+    return fs.existsSync(path.join(fs.realpathSync(root), "src", "index.ts"));
+  } catch {
+    return false;
+  }
+}
+
+/** The first candidate root with pristine `.ts` sources — skipping any
+ * self-provisioned copy (whose transpiled `.js` would freeze the runtime at its
+ * first-provisioned version) — else the first that resolves at all. */
+function pickPristine(candidates: readonly (string | undefined)[]): string | undefined {
+  const roots = candidates.filter((r): r is string => !!r);
+  return roots.find(hasTsSource) ?? roots[0];
 }
 
 /** The directory holding a package's package.json, resolved from `fromManifest`'s location. */

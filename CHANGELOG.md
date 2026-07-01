@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.1.17
+
+### @gleanql/vite
+Provision the runtime from the PRISTINE installed source, not the self-provisioned
+shadow. The plugin writes a per-app `@gleanql/client` (transpiled `.js` + generated
+accessor) into `node_modules/@gleanql/client`; on later builds, app-level resolution
+of `@gleanql/client` lands on that shadow (no `.ts`), and `resolveRuntimeSources`
+fell back to the newest version-keyed stash — so an **in-place `@gleanql/client`
+upgrade shipped the OLD runtime** while the compiler emitted new (e.g. `deferred`)
+operations. That mismatch eager-preloaded a deferred op with an unbound `$var` →
+runtime error. Now it skips any root without `.ts` sources (the shadow) and resolves
+the real upgraded copy through the host (`clientFrom`) package, re-stashing under the
+new version. Fixes silent stale-runtime after `pnpm update @gleanql/*`.
+
+### docs
+The two-sweep example now `await`s the deferred read (`await glean.nodes({ ids })`)
+and documents the rule: in an `async` component (or any non-React handler) you must
+`await` a deferred root — a synchronous Suspense read thrown from inside an `async`
+component re-invokes it and loops until the CPU budget is exhausted (blank page in
+production). The synchronous form is only for non-`async` components. See
+`docs/compiler.md`.
+
 ## 0.1.16
 
 ### @gleanql/compiler
