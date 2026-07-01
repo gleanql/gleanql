@@ -11,7 +11,7 @@ async function loadQuery(): Promise<string> {
 
 export default async function Route() {
   const q = await loadQuery(); // sweep 1: render-time value
-  const results = glean.search({ query: q }); // sweep 2: glean, runtime arg
+  const results = await glean.search({ query: q }); // sweep 2: glean, runtime arg
   return results.nodes.map((node) => <SearchResult node={node} />);
 }
 

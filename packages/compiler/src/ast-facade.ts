@@ -31,6 +31,8 @@ export interface AstFacade {
   isArrowFunction(n: ts.Node): n is ts.ArrowFunction;
   isFunctionExpression(n: ts.Node): n is ts.FunctionExpression;
   isFunctionDeclaration(n: ts.Node): n is ts.FunctionDeclaration;
+  /** True when a function/arrow carries the `async` modifier. */
+  isAsync(n: ts.Node): boolean;
   isExportAssignment(n: ts.Node): n is ts.ExportAssignment;
   isObjectBindingPattern(n: ts.Node): n is ts.ObjectBindingPattern;
   isPropertyAssignment(n: ts.Node): n is ts.PropertyAssignment;
@@ -138,6 +140,7 @@ export const typescriptFacade: AstFacade = {
   isArrowFunction: ts.isArrowFunction,
   isFunctionExpression: ts.isFunctionExpression,
   isFunctionDeclaration: ts.isFunctionDeclaration,
+  isAsync: (n) => ((n as ts.HasModifiers).modifiers ?? []).some((m) => m.kind === ts.SyntaxKind.AsyncKeyword),
   isExportAssignment: ts.isExportAssignment,
   isObjectBindingPattern: ts.isObjectBindingPattern,
   isPropertyAssignment: ts.isPropertyAssignment,

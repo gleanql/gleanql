@@ -66,6 +66,20 @@ describe("await a glean root in an anonymous handler (server-handler pattern)", 
   });
 });
 
+describe("unawaited-deferred-read diagnostic (no false positives)", () => {
+  const analyze = (file: string) => analyzeWithTs({ fileName: path.join(here, file), supportDir, schema: mockSchema });
+
+  it("does NOT warn when an async component awaits the deferred read", () => {
+    // `const p = await glean.product({ handle })` — the async path, no Suspense loop.
+    expect(analyze("inline/deferred-awaited.tsx").diagnostics).toEqual([]);
+  });
+
+  it("does NOT warn for a synchronous (non-async) component's deferred read", () => {
+    // A non-async component reads synchronously via a real Suspense boundary — fine.
+    expect(analyze("inline/deferred-sync.tsx").diagnostics).toEqual([]);
+  });
+});
+
 describe("fileDerivedComponentName", () => {
   it("derives a PascalCase name from the basename only", () => {
     expect(fileDerivedComponentName("/abs/src/webhooks/orders.create.ts")).toBe("OrdersCreate");

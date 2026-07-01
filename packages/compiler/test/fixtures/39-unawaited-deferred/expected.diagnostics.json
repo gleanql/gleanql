@@ -1,0 +1,6 @@
+[
+  {
+    "code": "unawaited-deferred-read",
+    "message": "Deferred graph root `glean.cart({ … })` is read synchronously in an async component.\n`await` it — e.g. `const x = await glean.cart({ … })`. A synchronous (Suspense) read\nthrown from inside an async component re-invokes it and loops until the CPU budget is\nexhausted. The synchronous form is only for a non-async component."
+  }
+]

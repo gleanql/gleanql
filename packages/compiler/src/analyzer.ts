@@ -48,6 +48,8 @@ interface GraphValue {
   readBase: string;
   /** Path from `readBase`. */
   readPath: readonly string[];
+  /** A render-time ("two-sweep") root — its arg is a call-site value. */
+  deferred?: boolean;
 }
 
 interface ComponentInfo {
@@ -55,6 +57,9 @@ interface ComponentInfo {
   readonly params: ts.NodeArray<ts.ParameterDeclaration>;
   readonly body: ts.Node | undefined;
   readonly declNode: ts.Node;
+  /** True when the component function is `async` (a synchronous deferred read
+   * inside it loops on Suspense — see the `unawaited-deferred-read` diagnostic). */
+  readonly async: boolean;
 }
 
 type ComponentResolution =
@@ -85,6 +90,9 @@ class Analyzer {
   private readonly globalRegistries = new Map<string, readonly ComponentInfo[]>();
   /** >0 while walking inside a <GraphLazy> boundary; suppresses operation reads. */
   private lazyDepth = 0;
+  /** True while evaluating the operand of an `await` — so a deferred root reached
+   * through it is known to be awaited (no `unawaited-deferred-read` diagnostic). */
+  private inAwaitedRead = false;
 
   constructor(
     private readonly sf: ts.SourceFile,
@@ -138,7 +146,7 @@ class Analyzer {
   private indexComponents(): void {
     for (const stmt of this.sf.statements) {
       if (this.ast.isFunctionDeclaration(stmt) && stmt.name) {
-        this.addComponent(stmt.name.text, stmt.parameters, stmt.body, stmt);
+        this.addComponent(stmt.name.text, stmt.parameters, stmt.body, stmt, this.ast.isAsync(stmt));
       } else if (this.ast.isVariableStatement(stmt)) {
         for (const decl of stmt.declarationList.declarations) {
           if (
@@ -146,7 +154,7 @@ class Analyzer {
             decl.initializer &&
             isFunctionLike(this.ast, decl.initializer)
           ) {
-            this.addComponent(decl.name.text, decl.initializer.parameters, decl.initializer.body, decl);
+            this.addComponent(decl.name.text, decl.initializer.parameters, decl.initializer.body, decl, this.ast.isAsync(decl.initializer));
           }
         }
       } else if (this.ast.isFunctionDeclaration(stmt) && !stmt.name) {
@@ -156,7 +164,7 @@ class Analyzer {
         if (this.bodyContainsGraphRoot(stmt.body)) {
           const name = fileDerivedComponentName(this.sf.fileName);
           if (!this.componentsByName.has(name)) {
-            this.addComponent(name, stmt.parameters, stmt.body, stmt);
+            this.addComponent(name, stmt.parameters, stmt.body, stmt, this.ast.isAsync(stmt));
           }
         }
       } else if (this.ast.isExportAssignment(stmt)) {
@@ -172,7 +180,7 @@ class Analyzer {
         if (fn) {
           const name = fileDerivedComponentName(this.sf.fileName);
           if (!this.componentsByName.has(name)) {
-            this.addComponent(name, fn.parameters, fn.body, fn);
+            this.addComponent(name, fn.parameters, fn.body, fn, this.ast.isAsync(fn));
           }
         }
       }
@@ -223,8 +231,9 @@ class Analyzer {
     params: ts.NodeArray<ts.ParameterDeclaration>,
     body: ts.Node | undefined,
     declNode: ts.Node,
+    async: boolean,
   ): void {
-    const info: ComponentInfo = { name, params, body, declNode };
+    const info: ComponentInfo = { name, params, body, declNode, async };
     this.componentsByName.set(name, info);
     this.componentsByDecl.set(declNode, info);
   }
@@ -261,6 +270,7 @@ class Analyzer {
       rootSel,
       vars,
       resolveLocal,
+      async: comp.async,
     });
 
     const ir: OperationIR = {
@@ -539,12 +549,19 @@ class Analyzer {
     // glean.order({ id })` binds `o` to the deferred root (and `(await
     // glean.order({ id })).name` reads it inline), exactly as the un-awaited form
     // does in a React render — so field reads trace into the operation either way.
-    if (
-      this.ast.isParenthesizedExpression(node) ||
-      this.ast.isNonNullExpression(node) ||
-      this.ast.isAwaitExpression(node)
-    ) {
+    if (this.ast.isParenthesizedExpression(node) || this.ast.isNonNullExpression(node)) {
       return this.evalExpr(node.expression, scope, component, stack, route);
+    }
+    if (this.ast.isAwaitExpression(node)) {
+      // Mark that a deferred root reached through this operand is AWAITED, so it
+      // isn't flagged by the `unawaited-deferred-read` diagnostic.
+      const prev = this.inAwaitedRead;
+      this.inAwaitedRead = true;
+      try {
+        return this.evalExpr(node.expression, scope, component, stack, route);
+      } finally {
+        this.inAwaitedRead = prev;
+      }
     }
     if (this.ast.isIdentifier(node)) {
       return scope.graphVars.get(node.text);
@@ -986,14 +1003,20 @@ class Analyzer {
   private componentFromDecl(decl: ts.Declaration): ComponentInfo | undefined {
     let info: ComponentInfo | undefined;
     if (this.ast.isFunctionDeclaration(decl) && decl.name && decl.body) {
-      info = { name: decl.name.text, params: decl.parameters, body: decl.body, declNode: decl };
+      info = { name: decl.name.text, params: decl.parameters, body: decl.body, declNode: decl, async: this.ast.isAsync(decl) };
     } else if (
       this.ast.isVariableDeclaration(decl) &&
       this.ast.isIdentifier(decl.name) &&
       decl.initializer &&
       isFunctionLike(this.ast, decl.initializer)
     ) {
-      info = { name: decl.name.text, params: decl.initializer.parameters, body: decl.initializer.body, declNode: decl };
+      info = {
+        name: decl.name.text,
+        params: decl.initializer.parameters,
+        body: decl.initializer.body,
+        declNode: decl,
+        async: this.ast.isAsync(decl.initializer),
+      };
     }
     if (info) {
       this.componentsByDecl.set(decl, info);
@@ -1073,12 +1096,25 @@ class Analyzer {
       args: argMap,
       child: new MutableSelection(def.type),
     }));
+
+    // A render-time ("two-sweep") root: one of its args lifted to a runtime var.
+    const deferred = argMap.some(([, v]) => v.kind === "var" && route.vars.deferred.includes(v.name));
+    // In an `async` component, a deferred root read MUST be awaited: read
+    // synchronously it throws a Suspense promise, which re-invokes the async
+    // component and loops until the CPU budget is exhausted. Flag it unless it was
+    // reached through an `await`. (In a non-`async` component the synchronous read
+    // is fine — a Suspense boundary catches the throw.)
+    if (deferred && route.async && !this.inAwaitedRead) {
+      this.addDiagnostic("unawaited-deferred-read", messages.unawaitedDeferredRead(rootName), call);
+    }
+
     return {
       typeName: def.type,
       sel: field.child!,
       isList: def.list ?? false,
       readBase: def.type,
       readPath: [],
+      deferred,
     };
   }
 
@@ -1410,5 +1446,8 @@ interface RouteCtx {
   readonly rootSel: MutableSelection;
   readonly vars: VariablesBuilder;
   readonly resolveLocal: (name: string) => { name: string; init: ts.Expression } | undefined;
+  /** The route component is `async` — a deferred root read must be `await`ed
+   * (a synchronous Suspense read loops the async component). */
+  readonly async?: boolean;
 }
 
