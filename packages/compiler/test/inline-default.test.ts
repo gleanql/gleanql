@@ -45,6 +45,27 @@ describe("anonymous default function declaration", () => {
   });
 });
 
+describe("await a glean root in an anonymous handler (server-handler pattern)", () => {
+  const result = analyzeWithTs({
+    fileName: path.join(here, "inline/booking.tsx"),
+    supportDir,
+    schema: mockSchema,
+  });
+
+  it("names the op after the file, marks it deferred, and traces reads on the awaited value", () => {
+    expect(result.operations).toHaveLength(1);
+    const op = result.operations[0]!;
+    expect(op.name).toBe("Booking");
+    expect(op.deferred).toBe(true);
+    expect([...(op.runtimeVars ?? [])]).toEqual(["product_handle"]);
+    // The read on `const product = await glean.product(...)` traces into the
+    // operation — without the await-unwrap it would silently compile to
+    // `product { __typename id }` (a runtime under-fetch, no build diagnostic).
+    expect(op.document).toContain("title");
+    expect(result.readMap["Booking"]).toContain("Product.title");
+  });
+});
+
 describe("fileDerivedComponentName", () => {
   it("derives a PascalCase name from the basename only", () => {
     expect(fileDerivedComponentName("/abs/src/webhooks/orders.create.ts")).toBe("OrdersCreate");

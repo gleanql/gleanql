@@ -534,7 +534,16 @@ class Analyzer {
     stack: readonly string[],
     route?: RouteCtx,
   ): GraphValue | undefined {
-    if (this.ast.isParenthesizedExpression(node) || this.ast.isNonNullExpression(node)) {
+    // See through `(expr)`, `expr!`, and `await expr`. The last is what makes the
+    // isomorphic accessor work in a non-React handler: `const o = await
+    // glean.order({ id })` binds `o` to the deferred root (and `(await
+    // glean.order({ id })).name` reads it inline), exactly as the un-awaited form
+    // does in a React render — so field reads trace into the operation either way.
+    if (
+      this.ast.isParenthesizedExpression(node) ||
+      this.ast.isNonNullExpression(node) ||
+      this.ast.isAwaitExpression(node)
+    ) {
       return this.evalExpr(node.expression, scope, component, stack, route);
     }
     if (this.ast.isIdentifier(node)) {
