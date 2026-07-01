@@ -129,7 +129,7 @@ pattern — fetch your own data first, then GraphQL keyed by it:
 export default async function Bookings() {
   const services = await listServices();              // sweep 1: your DB
   const ids = services.map((s) => s.productId);
-  const products = glean.nodes({ ids });              // sweep 2: glean, runtime args
+  const products = await glean.nodes({ ids });        // sweep 2: glean, runtime args
   products.forEach((n) => {
     if (n.__typename === "Product") { /* n.title, n.featuredMedia… */ }
   });
@@ -141,14 +141,25 @@ export function getBookingsVariables(ctx) {
 }
 ```
 
+**`await` the deferred read in an `async` component.** A deferred root read is
+resolved either synchronously (throwing a Suspense promise) or by `await`ing it —
+but a synchronous read thrown from inside an `async` component makes React
+re-invoke the component, which throws again → an infinite retry that burns the
+whole CPU budget (a blank page / "exceeded CPU time" in production). `await
+glean.nodes({ ids })` resolves cleanly with no throw. The synchronous form is only
+for a **non-`async`** component, where a real Suspense boundary catches the throw
+and re-renders. The compiler traces the field reads through the `await` either way,
+so the compiled operation is identical.
+
 `ctx` is simply the variable source known *before* render; the render scope is the
 source known *during* it. Both are first-class. (The `__typename` narrowing is
 independent of where the args come from — see [Interfaces & unions](#interfaces--unions).)
 
 A deferred root is **isomorphic** — the same call site works in a React render and
-in a plain (non-React) server handler (webhook, job, proxy, API route). In a render
-it reads synchronously (Suspense); in a handler you `await` it — no `runRoute`, no
-raw `graphql()`:
+in a plain (non-React) server handler (webhook, job, proxy, API route). In a
+synchronous (non-`async`) component it reads synchronously (Suspense); in an
+`async` component or a plain handler you `await` it (see the note above) — no
+`runRoute`, no raw `graphql()`:
 
 ```tsx
 // React / RSC — reads synchronously, suspending until the fetch + seed land:
