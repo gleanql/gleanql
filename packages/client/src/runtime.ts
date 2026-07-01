@@ -107,6 +107,46 @@ export class GraphRuntime {
     throw entry.promise;
   }
 
+  /**
+   * Async twin of {@link resolveRoot} for non-React callers (server handlers,
+   * proxy): run `exec` once per `key` and RESOLVE to the seeded root refs instead
+   * of throwing a Suspense promise. Shares the `resolvedRoots` cache and the
+   * `pending` map with `resolveRoot`, so an `await` and a concurrent sync (thrown)
+   * read of the same root+args dedupe to a single in-flight fetch.
+   */
+  async resolveRootAsync(key: string, exec: () => Promise<Record<string, FieldValue>>): Promise<Record<string, FieldValue>> {
+    const done = this.resolvedRoots.get(key);
+    if (done) return done;
+
+    const pkey = `@root:${key}`;
+    const existing = this.pending.get(pkey);
+    if (existing) {
+      // A sync read already kicked off this fetch — await it, then read the cache.
+      await existing.promise;
+      return this.resolvedRoots.get(key) ?? {};
+    }
+
+    const entry = this.makeDeferred();
+    // The barrier promise only exists to signal concurrent readers (a sync reader
+    // `throw`s it, an async reader `await`s it). On the solo path nothing attaches
+    // to it, so observe its rejection here — the error still propagates to THIS
+    // caller via the `throw` below; without this a failing `await glean.x()` would
+    // surface an unhandled rejection (noisy / isolate-fatal in a Worker).
+    entry.promise.catch(() => {});
+    this.pending.set(pkey, entry);
+    try {
+      const roots = await exec();
+      this.resolvedRoots.set(key, roots);
+      this.pending.delete(pkey);
+      entry.resolve();
+      return roots;
+    } catch (error) {
+      this.pending.delete(pkey);
+      entry.reject(error);
+      throw error;
+    }
+  }
+
   /** Seed a record's fields (e.g. from the compiled operation result). */
   seed(ref: GraphRef, fields: Readonly<Record<string, FieldValue>>): void {
     this.cache.merge(ref, fields);

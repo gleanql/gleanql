@@ -175,6 +175,11 @@ const handler: ProxyHandler<{ state: ProxyState }> = {
       return { ref: state.ref, type: state.type } satisfies GraphSelection;
     }
     if (typeof prop === "symbol") return undefined;
+    // Never look like a thenable: a graph proxy can be the resolved value of
+    // `await glean.order({ id })`, and Promise resolution probes `.then` — reading
+    // it as a (missing) field would suspend/throw mid-resolution. GraphQL has no
+    // `then` field in practice, so returning undefined is safe.
+    if (prop === "then") return undefined;
     if (prop === "__typename") {
       // Identity field: prefer the ref's own typename, fall back to a cache read.
       return state.ref.__typename ?? readField(state, "__typename");
@@ -265,6 +270,15 @@ export interface BindGraphOptions {
    * the integration over `runtime.resolveRoot` + `resolveDeferredRoot`.
    */
   readonly resolveDeferredRoot?: (rootField: string, args: Record<string, unknown> | undefined) => FieldValue;
+  /**
+   * Async twin of {@link resolveDeferredRoot}: resolve the seeded value without
+   * throwing, so a deferred root can be `await`ed in a non-React server handler
+   * (`const o = await glean.order({ id })`). Wired over `runtime.resolveRootAsync`.
+   */
+  readonly resolveDeferredRootAsync?: (
+    rootField: string,
+    args: Record<string, unknown> | undefined,
+  ) => Promise<FieldValue>;
 }
 
 export function bindGraph(options: BindGraphOptions): BoundGraph {
@@ -282,16 +296,24 @@ export function bindGraph(options: BindGraphOptions): BoundGraph {
       const trail: PathStep[] = [{ name: fieldName, ...(args ? { args } : {}) }];
 
       // Deferred ("two-sweep") root: args are only known at the render call-site,
-      // so execute on demand (suspends until fetched + seeded) instead of reading
-      // a preloaded root. This replaces the silent empty-array fallback below for
-      // deferred list roots — `glean.nodes({ ids }).map(...)` fetches, not yields [].
+      // so execute on demand instead of reading a preloaded root. The returned
+      // value is ISOMORPHIC — `await glean.nodes({ ids })` resolves it (server
+      // handlers), while `glean.nodes({ ids }).map(...)` reads it synchronously via
+      // Suspense (React). This also replaces the silent empty-array fallback below:
+      // a deferred list root fetches, it does not yield [].
       if (options.deferredRoots?.has(fieldName) && options.resolveDeferredRoot) {
-        const seededDeferred = options.resolveDeferredRoot(fieldName, args);
-        if (fieldDef.list) {
-          const items = Array.isArray(seededDeferred) ? seededDeferred : [];
-          return items.map((item) => wrap(binding, item, fieldDef.type, trail));
-        }
-        return wrap(binding, seededDeferred, fieldDef.type, trail);
+        const materialize = (seeded: FieldValue): unknown =>
+          fieldDef.list
+            ? (Array.isArray(seeded) ? seeded : []).map((item) => wrap(binding, item, fieldDef.type, trail))
+            : wrap(binding, seeded, fieldDef.type, trail);
+        return makeDeferredRootValue(
+          fieldName,
+          args,
+          fieldDef.list ?? false,
+          materialize,
+          options.resolveDeferredRoot,
+          options.resolveDeferredRootAsync,
+        );
       }
 
       const rootsNow =
@@ -312,4 +334,64 @@ export function bindGraph(options: BindGraphOptions): BoundGraph {
     };
   }
   return graph as BoundGraph;
+}
+
+/**
+ * A deferred ("two-sweep") root read is BOTH awaitable and directly readable, so
+ * the same call works in a React render and a plain server handler:
+ *  - `await glean.order({ id })`  → async-resolve, no Suspense (server handlers)
+ *  - `glean.order({ id }).name`   → sync-resolve, suspends until seeded (React)
+ *
+ * It's a proxy over an EMPTY array (list root) or object (singular root): `.then`
+ * drives the async executor (kept in the get-trap only, never an own property, so
+ * it is awaitable without leaking into enumeration/spread/JSON), and every other
+ * access sync-resolves (throwing a Suspense promise until the fetch+seed completes)
+ * then delegates to the materialized value. The array target keeps `Array.isArray`
+ * true for a list root, matching a non-deferred list read; the materialized value
+ * is memoized so repeated sync reads on the same returned value keep stable element
+ * identity. When no async executor is wired `.then` is absent, so the value is a
+ * plain (non-thenable) sync read — unchanged React behavior.
+ */
+function makeDeferredRootValue(
+  rootField: string,
+  args: Record<string, unknown> | undefined,
+  isList: boolean,
+  materialize: (seeded: FieldValue) => unknown,
+  syncResolve: (rootField: string, args: Record<string, unknown> | undefined) => FieldValue,
+  asyncResolve?: (rootField: string, args: Record<string, unknown> | undefined) => Promise<FieldValue>,
+): unknown {
+  const then = asyncResolve
+    ? (onFulfilled?: (v: unknown) => unknown, onRejected?: (e: unknown) => unknown) =>
+        asyncResolve(rootField, args).then((seeded) => materialize(seeded)).then(onFulfilled, onRejected)
+    : undefined;
+
+  // Materialize once per resolved value: `syncResolve` throws the Suspense promise
+  // until seeded, so nothing is cached until it succeeds; afterwards repeated reads
+  // return the same array/proxies (stable identity, matching a plain array/object).
+  let ready = false;
+  let value: unknown;
+  const syncValue = (): Record<PropertyKey, unknown> => {
+    if (!ready) {
+      value = materialize(syncResolve(rootField, args));
+      ready = true;
+    }
+    return value as Record<PropertyKey, unknown>;
+  };
+
+  // A real array target for list roots (so `Array.isArray` is true and index/length
+  // reads behave like the array they materialize to); a plain object otherwise. Both
+  // are empty and carry no own keys, so enumeration/spread never leak internals.
+  const target: object = isList ? [] : {};
+
+  return new Proxy(target, {
+    get(_t, prop) {
+      if (prop === "then") return then;
+      // Any other read sync-resolves (Suspense) then delegates to the materialized
+      // value/array. Bind functions (Array.prototype.* / callable graph fields) to
+      // that value so `this` is correct.
+      const v = syncValue();
+      const got = v[prop];
+      return typeof got === "function" ? (got as (...a: unknown[]) => unknown).bind(v) : got;
+    },
+  });
 }

@@ -40,6 +40,9 @@ version (with an honest feature matrix) is in the docs: `pnpm docs` →
   dev server runs.
 - 🧠 **Normalized reactive cache** — field-level re-rendering, Suspense-aware
   reads, smart memory (reference-counted retention + opt-in staleness GC).
+- 🔀 **Reads anywhere** — the same `glean.x({…})` that suspends in a component is
+  `await`-able in a plain server handler (webhook, job, proxy, route), so non-React
+  code fetches through the compiler too — no raw query strings.
 - ✍️ **Mutations & live data** — compile-time `useMutation` with optimistic
   updates and auto-rollback, `useSubscription` over SSE or `graphql-ws`.
 - 🔒 **Persisted operations** — every build emits a sha-256 allowlist; flip

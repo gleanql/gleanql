@@ -45,6 +45,8 @@ export interface Product {
 // product.title now fails to compile if the API drops or renames `title`.
 ```
 
+An **interface** renders as the *union of its implementers* — `export type Node = Product | Collection` — not a thin `interface Node { __typename; id }`. Every implementer already carries the interface's fields (introspection includes inherited ones), so common reads like `node.id` work across the union, and a `node.__typename === "Product"` guard narrows to the concrete type so `node.title` becomes accessible. That's the shape a selection on an interface root (`node(id:) { … on Product { title } }`) actually returns — which is what makes `await glean.node({ id })` narrowable in a handler.
+
 ## Loop closure
 
 The generator is decoupled from graphql-js. It transforms the introspection JSON, using structural types. The whole loop is verified end-to-end in `examples/storefront/codegen.test.ts`:

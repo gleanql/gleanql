@@ -14,13 +14,18 @@ const SDL = /* GraphQL */ `
   type Query {
     product(handle: String!): Product
     search(term: String!, first: Int): [SearchResultItem!]!
+    node(id: ID!): Node
+  }
+
+  interface Node {
+    id: ID!
   }
 
   type Mutation {
     productUpdate(id: ID!, title: String!): ProductUpdatePayload!
   }
 
-  type Product {
+  type Product implements Node {
     id: ID!
     title: String!
     descriptionHtml: String
@@ -54,7 +59,7 @@ const SDL = /* GraphQL */ `
     DRAFT
   }
 
-  type Collection {
+  type Collection implements Node {
     id: ID!
     title: String!
   }
@@ -137,6 +142,13 @@ describe("generateTypes", () => {
   it("renders enums and unions", () => {
     expect(types).toContain(`export type ProductStatus = "ACTIVE" | "DRAFT";`);
     expect(types).toContain(`export type SearchResultItem = Product | Collection;`);
+  });
+
+  it("renders interfaces as a narrowable union of their possible types", () => {
+    // So `if (n.__typename === "Product") n.title` refines to the concrete type;
+    // a thin `interface Node { __typename; id }` would not expose `title`.
+    expect(types).toContain(`export type Node = Product | Collection;`);
+    expect(types).not.toContain(`export interface Node {`);
   });
 
   it("renders input objects with optional/required members", () => {

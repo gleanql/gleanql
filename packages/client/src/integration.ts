@@ -166,25 +166,35 @@ export function createGraphIntegration<Ctx extends Record<string, unknown> = Rec
     }
 
     // The deferred-root executor: fetch a render-time root with its call-site
-    // args (suspends via runtime.resolveRoot, seeds, then resolves to the ref(s)).
+    // args, seed the cache, and resolve to the seeded ref(s). `runDeferredRoot` is
+    // the shared async fetch; the SYNC form (`resolveRoot`) throws a Suspense
+    // promise for React renders, the ASYNC form (`resolveRootAsync`) resolves for
+    // non-React callers (`await glean.order({ id })` in a server handler). Both
+    // dedupe on the same root+args key.
+    const deferredKey = (rootField: string, args: Record<string, unknown> | undefined) =>
+      `${rootField}(${canonicalArgs(toArgMap(args ?? {}))})`;
+    const deferredExec =
+      (rootField: string, args: Record<string, unknown> | undefined) => async (): Promise<Record<string, FieldValue>> => {
+        const res = await runDeferredRoot({
+          op: operation,
+          rootField,
+          args: args ?? {},
+          schema: options.schema,
+          adapter: options.adapter,
+          runtime,
+          context: requestContext,
+        });
+        if (!res.ok && res.error) throw new Error(res.error);
+        return res.roots ?? {};
+      };
+
     const resolveDeferred = operation.deferred
-      ? (rootField: string, args: Record<string, unknown> | undefined): FieldValue => {
-          const key = `${rootField}(${canonicalArgs(toArgMap(args ?? {}))})`;
-          const seededRoots = runtime.resolveRoot(key, async () => {
-            const res = await runDeferredRoot({
-              op: operation,
-              rootField,
-              args: args ?? {},
-              schema: options.schema,
-              adapter: options.adapter,
-              runtime,
-              context: requestContext,
-            });
-            if (!res.ok && res.error) throw new Error(res.error);
-            return res.roots ?? {};
-          });
-          return seededRoots[rootField];
-        }
+      ? (rootField: string, args: Record<string, unknown> | undefined): FieldValue =>
+          runtime.resolveRoot(deferredKey(rootField, args), deferredExec(rootField, args))[rootField]
+      : undefined;
+    const resolveDeferredAsync = operation.deferred
+      ? async (rootField: string, args: Record<string, unknown> | undefined): Promise<FieldValue> =>
+          (await runtime.resolveRootAsync(deferredKey(rootField, args), deferredExec(rootField, args)))[rootField]
       : undefined;
 
     const graph = bindGraph({
@@ -193,6 +203,7 @@ export function createGraphIntegration<Ctx extends Record<string, unknown> = Rec
       roots,
       ...(deferredRoots ? { deferredRoots } : {}),
       ...(resolveDeferred ? { resolveDeferredRoot: resolveDeferred } : {}),
+      ...(resolveDeferredAsync ? { resolveDeferredRootAsync: resolveDeferredAsync } : {}),
     });
     const mutate = createMutator({ operations: options.operations, adapter: options.adapter, runtime, context: requestContext });
 

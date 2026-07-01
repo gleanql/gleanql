@@ -186,6 +186,18 @@ product.selection                     // escape hatch: { ref, type }
 
 A lone callable field reads by its plain name. Argument-conflicting variants the compiler aliased (`url_transformMaxWidth300`) resolve by their argument-derived key. The proxy tries the most-specific key first, then the plain name, so it is correct without knowing about conflicts.
 
+## Reads outside React (`await`)
+
+The proxy suspends: a missing scalar throws a promise that React turns into a fallback. Outside React — a webhook, job, proxy, or API-route handler — nothing catches that throw, so a **deferred root** (one whose args are computed at the call site — see [compiler → two-sweep](compiler.md)) is also *awaitable*:
+
+```tsx
+const order = await glean.order({ id });      // fetch + seed, then resolve
+order.name;                                   // cache hit
+const products = await glean.nodes({ ids });  // list root → a real array
+```
+
+`await glean.x({…})` runs the same fetch as the Suspense path — `resolveRoot` (sync, throws) and `resolveRootAsync` (async, resolves) share the request cache and in-flight map, so a concurrent render read and an `await` of the same root+args dedupe to one request — then hands back the seeded value (an object proxy, or an array for a list root). A graph proxy deliberately reports **no `then`**, so `await`ing an already-seeded (non-deferred) root, or returning a graph value from an `async` handler, is a safe pass-through rather than a `.then` probe that would suspend. Fields you read *after* the `await` must be part of the compiled operation for that handler (the compiler follows them the same way it does in a component); a truly dynamic field read still suspends, which has no meaning off-React.
+
 ## Request scope
 
 A module-level `import { glean } from "@gleanql/client"` must resolve to *the runtime for the current request* on the server, because concurrent requests must not share a cache. In the browser, it must resolve to a singleton. `GraphScope` is that seam. Back it with `AsyncLocalStorage` for automatic per-request isolation, or resolve from the framework's own request context.

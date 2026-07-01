@@ -144,8 +144,28 @@ export function getBookingsVariables(ctx) {
 `ctx` is simply the variable source known *before* render; the render scope is the
 source known *during* it. Both are first-class. (The `__typename` narrowing is
 independent of where the args come from — see [Interfaces & unions](#interfaces--unions).)
-Today this resolves on the server (RSC) via the integration; the underlying
-primitive (`runtime.resolveRoot` + `resolveDeferredRoot`) is general.
+
+A deferred root is **isomorphic** — the same call site works in a React render and
+in a plain (non-React) server handler (webhook, job, proxy, API route). In a render
+it reads synchronously (Suspense); in a handler you `await` it — no `runRoute`, no
+raw `graphql()`:
+
+```tsx
+// React / RSC — reads synchronously, suspending until the fetch + seed land:
+glean.order({ id }).name
+
+// Server handler — `await` the same call; resolves instead of suspending:
+const order = await glean.order({ id });   // object root → a graph value
+order.name;                                // cache hit (seeded by the fetch)
+const products = await glean.nodes({ ids }); // list root → a real array
+```
+
+Both paths go through the one deferred executor and share the request cache, so an
+`await` and a concurrent Suspense read of the same root+args dedupe to a single
+fetch. The runtime primitive is a pair — `runtime.resolveRoot` (sync, throws a
+Suspense promise) and `runtime.resolveRootAsync` (async, resolves) — and the bound
+graph exposes a deferred root as a value that is both directly readable and
+awaitable. See [runtime → Reads outside React](runtime.md#reads-outside-react-await).
 
 ## Dynamic components (tiers)
 
