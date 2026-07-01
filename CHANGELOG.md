@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.18
+
+### @gleanql/compiler
+Diagnostic: `unawaited-deferred-read`. A deferred ("two-sweep") root read that is
+consumed SYNCHRONOUSLY inside an `async` component (`const x = glean.nodes({ ids });
+x.forEach(…)`) is now a build-time error. Read synchronously it throws a Suspense
+promise, and thrown from inside an `async` component that re-invokes it, it loops
+until the CPU budget is exhausted (a blank page / "exceeded CPU time" in
+production). The fix is to `await` the read. The compiler only flags the `async`
+case — a synchronous read in a non-`async` component is fine (a Suspense boundary
+catches the throw) — and never flags an `await`ed read (it sees through the `await`).
+`@gleanql/vite` re-bundles the compiler, so a Vite build surfaces it. See
+`docs/compiler.md`.
+
 ## 0.1.17
 
 ### @gleanql/vite

@@ -97,6 +97,7 @@ function makeFacade(ast: Any): AstFacade {
     isArrowFunction: ast.isArrowFunction,
     isFunctionExpression: ast.isFunctionExpression,
     isFunctionDeclaration: ast.isFunctionDeclaration,
+    isAsync: (n: Any) => ((n.modifiers ?? []) as Any[]).some((m) => m.kind === sk.AsyncKeyword),
     isExportAssignment: ast.isExportAssignment,
     isObjectBindingPattern: ast.isObjectBindingPattern,
     isPropertyAssignment: ast.isPropertyAssignment,

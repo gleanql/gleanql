@@ -10,6 +10,7 @@ export type DiagnosticCode =
   | "graph-value-spread"
   | "recursive-component"
   | "unsupported-list-flow"
+  | "unawaited-deferred-read"
   | "imported-helper";
 
 export interface Diagnostic {
@@ -52,6 +53,14 @@ export const messages = {
       `Cannot statically analyze the list callback ${expr}.\n` +
       `Use an inline arrow/function, a reference to a named function, or a destructured\n` +
       `element parameter — the callback's element reads must be statically visible.`
+    );
+  },
+  unawaitedDeferredRead(root: string): string {
+    return (
+      `Deferred graph root \`glean.${root}({ … })\` is read synchronously in an async component.\n` +
+      `\`await\` it — e.g. \`const x = await glean.${root}({ … })\`. A synchronous (Suspense) read\n` +
+      `thrown from inside an async component re-invokes it and loops until the CPU budget is\n` +
+      `exhausted. The synchronous form is only for a non-async component.`
     );
   },
 } as const;

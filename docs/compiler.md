@@ -149,7 +149,8 @@ whole CPU budget (a blank page / "exceeded CPU time" in production). `await
 glean.nodes({ ids })` resolves cleanly with no throw. The synchronous form is only
 for a **non-`async`** component, where a real Suspense boundary catches the throw
 and re-renders. The compiler traces the field reads through the `await` either way,
-so the compiled operation is identical.
+so the compiled operation is identical — and it **flags the un-awaited case at build
+time** (`unawaited-deferred-read`), so you never ship the loop to production.
 
 `ctx` is simply the variable source known *before* render; the render scope is the
 source known *during* it. Both are first-class. (The `__typename` narrowing is
